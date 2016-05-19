@@ -1,13 +1,16 @@
 module Main exposing (..)
 
 import ElmTest exposing (..)
+import Test.HAMT
 import Test.LeanArray
 
 
 tests : Test
 tests =
     suite "Elm Collection Tests"
-        [ Test.LeanArray.tests ]
+        [ Test.HAMT.tests
+        , Test.LeanArray.tests
+        ]
 
 
 main =

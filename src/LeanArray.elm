@@ -24,27 +24,58 @@ length arr =
 
 fromList : List a -> LeanArray a
 fromList ls =
-    empty
+    List.foldl fromList' empty ls
+
+
+fromList' : a -> LeanArray a -> LeanArray a
+fromList' n arr =
+    push n arr
 
 
 toList : LeanArray a -> List a
 toList arr =
-    []
+    toList' (arr.length - 1) [] arr
+
+
+toList' : Int -> List a -> LeanArray a -> List a
+toList' idx acc arr =
+    if idx == -1 then
+        acc
+    else
+        let
+            val =
+                HAMT.get idx arr
+        in
+            case val of
+                HAMT.Element _ x ->
+                    toList' (idx - 1) (x :: acc) arr
+
+                _ ->
+                    Debug.crash "Not a proper array"
 
 
 push : a -> LeanArray a -> LeanArray a
 push a arr =
-    arr
+    HAMT.set arr.length a arr
 
 
 pop : LeanArray a -> LeanArray a
 pop arr =
-    arr
+    HAMT.remove (arr.length - 1) arr
 
 
 get : Int -> LeanArray a -> Maybe a
 get idx arr =
-    Nothing
+    let
+        val =
+            HAMT.get idx arr
+    in
+        case val of
+            HAMT.Element _ x ->
+                Just x
+
+            _ ->
+                Nothing
 
 
 insertAt : Int -> LeanArray a -> LeanArray a

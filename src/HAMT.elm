@@ -1,13 +1,6 @@
-module HAMT
-    exposing
-        ( HAMT
-        , empty
-        , fromList
-        , toList
-        , get
-        , set
-        , remove
-        )
+module HAMT exposing (..)
+
+import Bitwise
 
 
 type alias HAMT a =
@@ -53,7 +46,7 @@ type alias NodeList a =
 
 
 type Node a
-    = Element a
+    = Element Int a
     | SubTree (NodeList a)
     | Empty
 
@@ -100,8 +93,8 @@ emptyNodeList =
     }
 
 
-valueByIndex : NodeList a -> Int -> Node a
-valueByIndex ls idx =
+valueByIndex : Int -> NodeList a -> Node a
+valueByIndex idx ls =
     case idx of
         0 ->
             ls.i0
@@ -203,9 +196,112 @@ valueByIndex ls idx =
             Debug.crash "Index out of bounds"
 
 
-fromList : List a -> HAMT a
-fromList ls =
-    empty
+setByIndex : Int -> Node a -> NodeList a -> NodeList a
+setByIndex idx val ls =
+    case idx of
+        0 ->
+            { ls | i0 = val }
+
+        1 ->
+            { ls | i1 = val }
+
+        2 ->
+            { ls | i2 = val }
+
+        3 ->
+            { ls | i3 = val }
+
+        4 ->
+            { ls | i4 = val }
+
+        5 ->
+            { ls | i5 = val }
+
+        6 ->
+            { ls | i6 = val }
+
+        7 ->
+            { ls | i7 = val }
+
+        8 ->
+            { ls | i8 = val }
+
+        9 ->
+            { ls | i9 = val }
+
+        10 ->
+            { ls | i10 = val }
+
+        11 ->
+            { ls | i11 = val }
+
+        12 ->
+            { ls | i12 = val }
+
+        13 ->
+            { ls | i13 = val }
+
+        14 ->
+            { ls | i14 = val }
+
+        15 ->
+            { ls | i15 = val }
+
+        16 ->
+            { ls | i16 = val }
+
+        17 ->
+            { ls | i17 = val }
+
+        18 ->
+            { ls | i18 = val }
+
+        19 ->
+            { ls | i19 = val }
+
+        20 ->
+            { ls | i20 = val }
+
+        21 ->
+            { ls | i21 = val }
+
+        22 ->
+            { ls | i22 = val }
+
+        23 ->
+            { ls | i23 = val }
+
+        24 ->
+            { ls | i24 = val }
+
+        25 ->
+            { ls | i25 = val }
+
+        26 ->
+            { ls | i26 = val }
+
+        27 ->
+            { ls | i27 = val }
+
+        28 ->
+            { ls | i28 = val }
+
+        29 ->
+            { ls | i29 = val }
+
+        30 ->
+            { ls | i30 = val }
+
+        31 ->
+            { ls | i31 = val }
+
+        _ ->
+            Debug.crash "Index out of bounds"
+
+
+hashPositionAtDepth : Int -> Int -> Int
+hashPositionAtDepth depth hash =
+    Bitwise.and (Bitwise.shiftRightLogical hash (5 * depth)) 0x1F
 
 
 toList : HAMT a -> List a
@@ -215,12 +311,62 @@ toList hamt =
 
 get : Int -> HAMT a -> Node a
 get hash hamt =
-    Empty
+    get' hash 0 hamt.nodes
 
 
-set : Int -> HAMT a -> HAMT a
-set hash hamt =
-    hamt
+get' : Int -> Int -> NodeList a -> Node a
+get' hash depth ls =
+    let
+        pos =
+            hashPositionAtDepth depth hash
+
+        val =
+            valueByIndex pos ls
+    in
+        case val of
+            SubTree nodes ->
+                get' hash (depth + 1) nodes
+
+            _ ->
+                val
+
+
+set : Int -> a -> HAMT a -> HAMT a
+set hash val hamt =
+    HAMT (hamt.length + 1) <| set' hash 0 val hamt.nodes
+
+
+set' : Int -> Int -> a -> NodeList a -> NodeList a
+set' hash depth val ls =
+    let
+        pos =
+            hashPositionAtDepth depth hash
+
+        currValue =
+            valueByIndex pos ls
+    in
+        case currValue of
+            Empty ->
+                setByIndex pos (Element hash val) ls
+
+            Element xHash x ->
+                let
+                    newDepth =
+                        depth + 1
+
+                    subNodes =
+                        emptyNodeList
+                            |> set' xHash newDepth x
+                            |> set' hash newDepth val
+                in
+                    setByIndex pos (SubTree subNodes) ls
+
+            SubTree nodes ->
+                let
+                    subNodes =
+                        set' hash (depth + 1) val nodes
+                in
+                    setByIndex pos (SubTree subNodes) ls
 
 
 remove : Int -> HAMT a -> HAMT a
