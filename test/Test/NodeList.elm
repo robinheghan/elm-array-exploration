@@ -1,6 +1,6 @@
-module Test.HAMT exposing (tests)
+module Test.NodeList exposing (tests)
 
-import HAMT exposing (..)
+import HAMT.NodeList exposing (..)
 import ElmTest exposing (..)
 
 
@@ -11,7 +11,7 @@ hash =
 
 tests : Test
 tests =
-    suite "Hamt tests"
+    suite "NodeList tests"
         [ hashPath
         ]
 

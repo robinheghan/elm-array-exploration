@@ -1,6 +1,6 @@
-module Test.LeanArray exposing (tests)
+module Test.Array exposing (tests)
 
-import LeanArray exposing (..)
+import HAMT.Array exposing (..)
 import ElmTest exposing (..)
 
 

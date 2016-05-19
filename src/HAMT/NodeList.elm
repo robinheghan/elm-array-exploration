@@ -1,12 +1,6 @@
-module HAMT exposing (..)
+module HAMT.NodeList exposing (..)
 
 import Bitwise
-
-
-type alias HAMT a =
-    { length : Int
-    , nodes : NodeList a
-    }
 
 
 type alias NodeList a =
@@ -51,13 +45,8 @@ type Node a
     | Empty
 
 
-empty : HAMT a
+empty : NodeList a
 empty =
-    HAMT 0 emptyNodeList
-
-
-emptyNodeList : NodeList a
-emptyNodeList =
     { i0 = Empty
     , i1 = Empty
     , i2 = Empty
@@ -304,18 +293,8 @@ hashPositionAtDepth depth hash =
     Bitwise.and (Bitwise.shiftRightLogical hash (5 * depth)) 0x1F
 
 
-toList : HAMT a -> List a
-toList hamt =
-    []
-
-
-get : Int -> HAMT a -> Node a
-get hash hamt =
-    get' hash 0 hamt.nodes
-
-
-get' : Int -> Int -> NodeList a -> Node a
-get' hash depth ls =
+get : Int -> Int -> NodeList a -> Node a
+get hash depth ls =
     let
         pos =
             hashPositionAtDepth depth hash
@@ -325,19 +304,14 @@ get' hash depth ls =
     in
         case val of
             SubTree nodes ->
-                get' hash (depth + 1) nodes
+                get hash (depth + 1) nodes
 
             _ ->
                 val
 
 
-set : Int -> a -> HAMT a -> HAMT a
-set hash val hamt =
-    HAMT (hamt.length + 1) <| set' hash 0 val hamt.nodes
-
-
-set' : Int -> Int -> a -> NodeList a -> NodeList a
-set' hash depth val ls =
+set : Int -> Int -> a -> NodeList a -> NodeList a
+set hash depth val ls =
     let
         pos =
             hashPositionAtDepth depth hash
@@ -355,20 +329,20 @@ set' hash depth val ls =
                         depth + 1
 
                     subNodes =
-                        emptyNodeList
-                            |> set' xHash newDepth x
-                            |> set' hash newDepth val
+                        empty
+                            |> set xHash newDepth x
+                            |> set hash newDepth val
                 in
                     setByIndex pos (SubTree subNodes) ls
 
             SubTree nodes ->
                 let
                     subNodes =
-                        set' hash (depth + 1) val nodes
+                        set hash (depth + 1) val nodes
                 in
                     setByIndex pos (SubTree subNodes) ls
 
 
-remove : Int -> HAMT a -> HAMT a
-remove hash hamt =
-    hamt
+remove : Int -> NodeList a -> NodeList a
+remove hash nl =
+    nl
