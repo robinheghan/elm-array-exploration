@@ -75,23 +75,24 @@ pop arr =
 
 get : Int -> HArray a -> Maybe a
 get idx arr =
-    let
-        val =
-            NodeList.get idx 0 arr.nodes
-    in
-        case val of
-            NodeList.Element _ x ->
-                Just x
+    if idx >= arr.length || idx < 0 then
+        Nothing
+    else
+        let
+            val =
+                NodeList.get idx 0 arr.nodes
+        in
+            case val of
+                NodeList.Element _ x ->
+                    Just x
 
-            _ ->
-                Nothing
-
-
-insertAt : Int -> HArray a -> HArray a
-insertAt idx arr =
-    arr
+                _ ->
+                    Nothing
 
 
-removeAt : Int -> HArray a -> HArray a
-removeAt idx arr =
-    arr
+set : Int -> a -> HArray a -> HArray a
+set idx val arr =
+    if idx >= arr.length || idx < 0 then
+        arr
+    else
+        { arr | nodes = NodeList.set idx 0 val arr.nodes }

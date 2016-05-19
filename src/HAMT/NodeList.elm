@@ -324,16 +324,20 @@ set hash depth val ls =
                 setByIndex pos (Element hash val) ls
 
             Element xHash x ->
-                let
-                    newDepth =
-                        depth + 1
+                {- OK for Arrays, bad for Dict and Set -}
+                if xHash == hash then
+                    setByIndex pos (Element hash val) ls
+                else
+                    let
+                        newDepth =
+                            depth + 1
 
-                    subNodes =
-                        empty
-                            |> set xHash newDepth x
-                            |> set hash newDepth val
-                in
-                    setByIndex pos (SubTree subNodes) ls
+                        subNodes =
+                            empty
+                                |> set xHash newDepth x
+                                |> set hash newDepth val
+                    in
+                        setByIndex pos (SubTree subNodes) ls
 
             SubTree nodes ->
                 let
