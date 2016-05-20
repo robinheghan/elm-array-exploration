@@ -16,7 +16,7 @@ empty =
 
 isEmpty : HArray a -> Bool
 isEmpty arr =
-    length arr == 0
+    arr.length == 0
 
 
 length : HArray a -> Int
@@ -26,12 +26,7 @@ length arr =
 
 fromList : List a -> HArray a
 fromList ls =
-    List.foldl fromList' empty ls
-
-
-fromList' : a -> HArray a -> HArray a
-fromList' n arr =
-    push n arr
+    List.foldl push empty ls
 
 
 toList : HArray a -> List a
@@ -65,7 +60,7 @@ push a arr =
 
 pop : HArray a -> HArray a
 pop arr =
-    if arr.length == 0 then
+    if isEmpty arr then
         arr
     else
         { length = arr.length - 1
@@ -96,3 +91,43 @@ set idx val arr =
         arr
     else
         { arr | nodes = NodeList.set idx 0 val arr.nodes }
+
+
+foldl : (a -> b -> b) -> b -> HArray a -> b
+foldl folder acc arr =
+    foldl' folder acc 0 arr
+
+
+foldl' : (a -> b -> b) -> b -> Int -> HArray a -> b
+foldl' folder acc idx arr =
+    if idx == arr.length then
+        acc
+    else
+        case get idx arr of
+            Just x ->
+                foldl' folder (folder x acc) (idx + 1) arr
+
+            Nothing ->
+                Debug.crash "This is a bug. Please report this."
+
+
+append : HArray a -> HArray a -> HArray a
+append a b =
+    foldl push a b
+
+
+filter : (a -> Bool) -> HArray a -> HArray a
+filter pred arr =
+    let
+        update n acc =
+            if pred n then
+                push n acc
+            else
+                acc
+    in
+        foldl update empty arr
+
+
+map : (a -> b) -> HArray a -> HArray b
+map mapper arr =
+    foldl (\n acc -> push (mapper n) acc) empty arr

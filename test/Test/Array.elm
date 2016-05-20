@@ -12,6 +12,7 @@ tests =
         , getSet
         , conversion
         , stack
+        , transform
         ]
 
 
@@ -33,6 +34,7 @@ length' =
         , test "large array" <| assertEqual 60 <| length (fromList [1..60])
         , test "push" <| assertEqual 3 <| length (push 3 (fromList [ 1, 2 ]))
         , test "pop" <| assertEqual 2 <| length (pop (fromList [ 1, 2, 3 ]))
+        , test "append" <| assertEqual 5 <| length (append (fromList [ 1, 2 ]) (fromList [ 3, 4, 5 ]))
         ]
 
 
@@ -61,4 +63,14 @@ stack =
         [ test "pop empty array returns empty array" <| assertEqual [] <| toList (pop empty)
         , test "pop removes last element" <| assertEqual [ 1, 2 ] <| toList (pop (fromList [ 1, 2, 3 ]))
         , test "push appends one element" <| assertEqual [ 1, 2, 3 ] <| toList (push 3 (fromList [ 1, 2 ]))
+        , test "append" <| assertEqual [1..120] <| toList (append (fromList [1..60]) (fromList [61..120]))
+        ]
+
+
+transform : Test
+transform =
+    suite "Transform tests"
+        [ test "foldl" <| assertEqual [ 3, 2, 1 ] <| foldl (::) [] (fromList [ 1, 2, 3 ])
+        , test "filter" <| assertEqual [ 2, 4, 6 ] <| toList (filter (\a -> a % 2 == 0) (fromList [1..6]))
+        , test "map" <| assertEqual [ 2, 3, 4 ] <| toList (map (\a -> a + 1) (fromList [ 1, 2, 3 ]))
         ]
