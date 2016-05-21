@@ -73,16 +73,12 @@ get idx arr =
     if idx >= arr.length || idx < 0 then
         Nothing
     else
-        let
-            val =
-                NodeList.get idx 0 arr.nodes
-        in
-            case val of
-                NodeList.Element _ x ->
-                    Just x
+        case NodeList.get idx 0 arr.nodes of
+            NodeList.Element _ x ->
+                Just x
 
-                _ ->
-                    Nothing
+            _ ->
+                Nothing
 
 
 set : Int -> a -> HArray a -> HArray a
@@ -103,11 +99,11 @@ foldl' folder acc idx arr =
     if idx == arr.length then
         acc
     else
-        case get idx arr of
-            Just x ->
+        case NodeList.get idx 0 arr.nodes of
+            NodeList.Element _ x ->
                 foldl' folder (folder x acc) (idx + 1) arr
 
-            Nothing ->
+            _ ->
                 Debug.crash "This is a bug. Please report this."
 
 
