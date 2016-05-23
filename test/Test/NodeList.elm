@@ -19,10 +19,10 @@ tests =
 hashPath : Test
 hashPath =
     suite "HashPath Tests"
-        [ test "first level" <| assertEqual 31 <| hashPositionAtDepth 0 hash
-        , test "second level" <| assertEqual 13 <| hashPositionAtDepth 1 hash
-        , test "third level" <| assertEqual 27 <| hashPositionAtDepth 2 hash
-        , test "fourth level" <| assertEqual 27 <| hashPositionAtDepth 3 hash
-        , test "fifth level" <| assertEqual 23 <| hashPositionAtDepth 4 hash
-        , test "sixth level" <| assertEqual 26 <| hashPositionAtDepth 5 hash
+        [ test "first level" <| assertEqual 31 <| hashPositionWithShift 0 hash
+        , test "second level" <| assertEqual 13 <| hashPositionWithShift 5 hash
+        , test "third level" <| assertEqual 27 <| hashPositionWithShift 10 hash
+        , test "fourth level" <| assertEqual 27 <| hashPositionWithShift 15 hash
+        , test "fifth level" <| assertEqual 23 <| hashPositionWithShift 20 hash
+        , test "sixth level" <| assertEqual 26 <| hashPositionWithShift 25 hash
         ]

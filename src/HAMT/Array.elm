@@ -5,7 +5,7 @@ import HAMT.NodeList as NodeList exposing (NodeList)
 
 type alias HArray a =
     { length : Int
-    , nodes : NodeList a
+    , nodes : NodeList Int a
     }
 
 
@@ -42,7 +42,7 @@ toIndexedList arr =
 push : a -> HArray a -> HArray a
 push a arr =
     { length = arr.length + 1
-    , nodes = NodeList.set arr.length 0 a arr.nodes
+    , nodes = NodeList.set 0 arr.length arr.length a arr.nodes
     }
 
 
@@ -51,9 +51,13 @@ pop arr =
     if isEmpty arr then
         arr
     else
-        { length = arr.length - 1
-        , nodes = NodeList.remove (arr.length - 1) arr.nodes
-        }
+        let
+            lastIndex =
+                arr.length - 1
+        in
+            { length = lastIndex
+            , nodes = NodeList.remove lastIndex arr.nodes
+            }
 
 
 get : Int -> HArray a -> Maybe a
@@ -61,8 +65,8 @@ get idx arr =
     if idx >= arr.length || idx < 0 then
         Nothing
     else
-        case NodeList.get idx 0 arr.nodes of
-            NodeList.Element _ x ->
+        case NodeList.get 0 idx idx arr.nodes of
+            NodeList.Element _ _ x ->
                 Just x
 
             _ ->
@@ -74,7 +78,7 @@ set idx val arr =
     if idx >= arr.length || idx < 0 then
         arr
     else
-        { arr | nodes = NodeList.set idx 0 val arr.nodes }
+        { arr | nodes = NodeList.set 0 idx idx val arr.nodes }
 
 
 foldr : (b -> a -> b) -> b -> HArray a -> b
@@ -87,8 +91,8 @@ foldr' folder acc idx arr =
     if idx == -1 then
         acc
     else
-        case NodeList.get idx 0 arr.nodes of
-            NodeList.Element _ x ->
+        case NodeList.get 0 idx idx arr.nodes of
+            NodeList.Element _ _ x ->
                 foldr' folder (folder acc x) (idx - 1) arr
 
             _ ->
@@ -105,8 +109,8 @@ foldl' folder acc idx arr =
     if idx == arr.length then
         acc
     else
-        case NodeList.get idx 0 arr.nodes of
-            NodeList.Element _ x ->
+        case NodeList.get 0 idx idx arr.nodes of
+            NodeList.Element _ _ x ->
                 foldl' folder (folder x acc) (idx + 1) arr
 
             _ ->
@@ -145,8 +149,8 @@ indexedMap' mapper acc idx arr =
     if idx == arr.length then
         acc
     else
-        case NodeList.get idx 0 arr.nodes of
-            NodeList.Element _ x ->
+        case NodeList.get 0 idx idx arr.nodes of
+            NodeList.Element _ _ x ->
                 indexedMap' mapper (push (mapper idx x) acc) (idx + 1) arr
 
             _ ->
@@ -173,8 +177,8 @@ slice' from to acc arr =
     if from == to then
         acc
     else
-        case NodeList.get from 0 arr.nodes of
-            NodeList.Element _ x ->
+        case NodeList.get 0 from from arr.nodes of
+            NodeList.Element _ _ x ->
                 slice' (from + 1) to (push x acc) arr
 
             _ ->

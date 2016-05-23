@@ -3,49 +3,49 @@ module HAMT.NodeList exposing (..)
 import Bitwise
 
 
-type alias NodeList a =
-    { i0 : Node a
-    , i1 : Node a
-    , i2 : Node a
-    , i3 : Node a
-    , i4 : Node a
-    , i5 : Node a
-    , i6 : Node a
-    , i7 : Node a
-    , i8 : Node a
-    , i9 : Node a
-    , i10 : Node a
-    , i11 : Node a
-    , i12 : Node a
-    , i13 : Node a
-    , i14 : Node a
-    , i15 : Node a
-    , i16 : Node a
-    , i17 : Node a
-    , i18 : Node a
-    , i19 : Node a
-    , i20 : Node a
-    , i21 : Node a
-    , i22 : Node a
-    , i23 : Node a
-    , i24 : Node a
-    , i25 : Node a
-    , i26 : Node a
-    , i27 : Node a
-    , i28 : Node a
-    , i29 : Node a
-    , i30 : Node a
-    , i31 : Node a
+type alias NodeList k v =
+    { i0 : Node k v
+    , i1 : Node k v
+    , i2 : Node k v
+    , i3 : Node k v
+    , i4 : Node k v
+    , i5 : Node k v
+    , i6 : Node k v
+    , i7 : Node k v
+    , i8 : Node k v
+    , i9 : Node k v
+    , i10 : Node k v
+    , i11 : Node k v
+    , i12 : Node k v
+    , i13 : Node k v
+    , i14 : Node k v
+    , i15 : Node k v
+    , i16 : Node k v
+    , i17 : Node k v
+    , i18 : Node k v
+    , i19 : Node k v
+    , i20 : Node k v
+    , i21 : Node k v
+    , i22 : Node k v
+    , i23 : Node k v
+    , i24 : Node k v
+    , i25 : Node k v
+    , i26 : Node k v
+    , i27 : Node k v
+    , i28 : Node k v
+    , i29 : Node k v
+    , i30 : Node k v
+    , i31 : Node k v
     }
 
 
-type Node a
-    = Element Int a
-    | SubTree (NodeList a)
+type Node k v
+    = Element Int k v
+    | SubTree (NodeList k v)
     | Empty
 
 
-empty : NodeList a
+empty : NodeList k v
 empty =
     { i0 = Empty
     , i1 = Empty
@@ -82,7 +82,7 @@ empty =
     }
 
 
-valueByIndex : Int -> NodeList a -> Node a
+valueByIndex : Int -> NodeList k v -> Node k v
 valueByIndex idx ls =
     case idx of
         0 ->
@@ -185,7 +185,7 @@ valueByIndex idx ls =
             Debug.crash "Index out of bounds"
 
 
-setByIndex : Int -> Node a -> NodeList a -> NodeList a
+setByIndex : Int -> Node k v -> NodeList k v -> NodeList k v
 setByIndex idx val ls =
     case idx of
         0 ->
@@ -288,65 +288,68 @@ setByIndex idx val ls =
             Debug.crash "Index out of bounds"
 
 
-hashPositionAtDepth : Int -> Int -> Int
-hashPositionAtDepth depth hash =
-    Bitwise.and (Bitwise.shiftRightLogical hash (5 * depth)) 0x1F
+hashPositionWithShift : Int -> Int -> Int
+hashPositionWithShift shift hash =
+    Bitwise.and (Bitwise.shiftRightLogical hash shift) 0x1F
 
 
-get : Int -> Int -> NodeList a -> Node a
-get hash depth ls =
+get : Int -> Int -> k -> NodeList k v -> Node k v
+get shift hash key ls =
     let
         pos =
-            hashPositionAtDepth depth hash
+            hashPositionWithShift shift hash
 
         val =
             valueByIndex pos ls
     in
         case val of
             SubTree nodes ->
-                get hash (depth + 1) nodes
+                get (shift + 5) hash key nodes
 
             _ ->
                 val
 
 
-set : Int -> Int -> a -> NodeList a -> NodeList a
-set hash depth val ls =
+set : Int -> Int -> k -> v -> NodeList k v -> NodeList k v
+set shift hash key val ls =
     let
         pos =
-            hashPositionAtDepth depth hash
+            hashPositionWithShift shift hash
 
         currValue =
             valueByIndex pos ls
+
+        newShift =
+            shift + 5
     in
         case currValue of
             Empty ->
-                setByIndex pos (Element hash val) ls
+                setByIndex pos (Element hash key val) ls
 
-            Element xHash x ->
+            Element xHash xKey xVal ->
                 {- OK for Arrays, bad for Dict and Set -}
                 if xHash == hash then
-                    setByIndex pos (Element hash val) ls
+                    setByIndex pos (Element hash key val) ls
                 else
                     let
-                        newDepth =
-                            depth + 1
-
                         subNodes =
                             empty
-                                |> set xHash newDepth x
-                                |> set hash newDepth val
+                                |> set newShift xHash xKey xVal
+                                |> set newShift hash key val
+                                |> SubTree
                     in
-                        setByIndex pos (SubTree subNodes) ls
+                        setByIndex pos subNodes ls
 
             SubTree nodes ->
                 let
                     subNodes =
-                        set hash (depth + 1) val nodes
+                        nodes
+                            |> set newShift hash key val
+                            |> SubTree
                 in
-                    setByIndex pos (SubTree subNodes) ls
+                    setByIndex pos subNodes ls
 
 
-remove : Int -> NodeList a -> NodeList a
+remove : Int -> NodeList k v -> NodeList k v
 remove hash nl =
     nl
