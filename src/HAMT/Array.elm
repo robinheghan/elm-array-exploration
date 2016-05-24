@@ -65,12 +65,7 @@ get idx arr =
     if idx >= arr.length || idx < 0 then
         Nothing
     else
-        case NodeList.get 0 idx idx arr.nodes of
-            NodeList.Element _ _ x ->
-                Just x
-
-            _ ->
-                Nothing
+        NodeList.get 0 idx idx arr.nodes
 
 
 set : Int -> a -> HArray a -> HArray a
@@ -92,10 +87,10 @@ foldr' folder acc idx arr =
         acc
     else
         case NodeList.get 0 idx idx arr.nodes of
-            NodeList.Element _ _ x ->
+            Just x ->
                 foldr' folder (folder acc x) (idx - 1) arr
 
-            _ ->
+            Nothing ->
                 Debug.crash "This is a bug. Please report this."
 
 
@@ -110,10 +105,10 @@ foldl' folder acc idx arr =
         acc
     else
         case NodeList.get 0 idx idx arr.nodes of
-            NodeList.Element _ _ x ->
+            Just x ->
                 foldl' folder (folder x acc) (idx + 1) arr
 
-            _ ->
+            Nothing ->
                 Debug.crash "This is a bug. Please report this."
 
 
@@ -150,10 +145,10 @@ indexedMap' mapper acc idx arr =
         acc
     else
         case NodeList.get 0 idx idx arr.nodes of
-            NodeList.Element _ _ x ->
+            Just x ->
                 indexedMap' mapper (push (mapper idx x) acc) (idx + 1) arr
 
-            _ ->
+            Nothing ->
                 Debug.crash "This is a bug. Please report this."
 
 
@@ -178,10 +173,10 @@ slice' from to acc arr =
         acc
     else
         case NodeList.get 0 from from arr.nodes of
-            NodeList.Element _ _ x ->
+            Just x ->
                 slice' (from + 1) to (push x acc) arr
 
-            _ ->
+            Nothing ->
                 Debug.crash "This is a bug. Please report this."
 
 

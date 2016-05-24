@@ -1,51 +1,53 @@
 module HAMT.NodeList exposing (..)
 
 import Bitwise
+import List.Extra exposing (find)
 
 
-type alias NodeList k v =
-    { i0 : Node k v
-    , i1 : Node k v
-    , i2 : Node k v
-    , i3 : Node k v
-    , i4 : Node k v
-    , i5 : Node k v
-    , i6 : Node k v
-    , i7 : Node k v
-    , i8 : Node k v
-    , i9 : Node k v
-    , i10 : Node k v
-    , i11 : Node k v
-    , i12 : Node k v
-    , i13 : Node k v
-    , i14 : Node k v
-    , i15 : Node k v
-    , i16 : Node k v
-    , i17 : Node k v
-    , i18 : Node k v
-    , i19 : Node k v
-    , i20 : Node k v
-    , i21 : Node k v
-    , i22 : Node k v
-    , i23 : Node k v
-    , i24 : Node k v
-    , i25 : Node k v
-    , i26 : Node k v
-    , i27 : Node k v
-    , i28 : Node k v
-    , i29 : Node k v
-    , i30 : Node k v
-    , i31 : Node k v
+type alias NodeList comparable v =
+    { i0 : Node comparable v
+    , i1 : Node comparable v
+    , i2 : Node comparable v
+    , i3 : Node comparable v
+    , i4 : Node comparable v
+    , i5 : Node comparable v
+    , i6 : Node comparable v
+    , i7 : Node comparable v
+    , i8 : Node comparable v
+    , i9 : Node comparable v
+    , i10 : Node comparable v
+    , i11 : Node comparable v
+    , i12 : Node comparable v
+    , i13 : Node comparable v
+    , i14 : Node comparable v
+    , i15 : Node comparable v
+    , i16 : Node comparable v
+    , i17 : Node comparable v
+    , i18 : Node comparable v
+    , i19 : Node comparable v
+    , i20 : Node comparable v
+    , i21 : Node comparable v
+    , i22 : Node comparable v
+    , i23 : Node comparable v
+    , i24 : Node comparable v
+    , i25 : Node comparable v
+    , i26 : Node comparable v
+    , i27 : Node comparable v
+    , i28 : Node comparable v
+    , i29 : Node comparable v
+    , i30 : Node comparable v
+    , i31 : Node comparable v
     }
 
 
-type Node k v
-    = Element Int k v
-    | SubTree (NodeList k v)
+type Node comparable v
+    = Element Int comparable v
+    | SubTree (NodeList comparable v)
+    | Collision Int (List ( comparable, v ))
     | Empty
 
 
-empty : NodeList k v
+empty : NodeList comparable v
 empty =
     { i0 = Empty
     , i1 = Empty
@@ -82,7 +84,7 @@ empty =
     }
 
 
-valueByIndex : Int -> NodeList k v -> Node k v
+valueByIndex : Int -> NodeList comparable v -> Node comparable v
 valueByIndex idx ls =
     case idx of
         0 ->
@@ -185,7 +187,7 @@ valueByIndex idx ls =
             Debug.crash "Index out of bounds"
 
 
-setByIndex : Int -> Node k v -> NodeList k v -> NodeList k v
+setByIndex : Int -> Node comparable v -> NodeList comparable v -> NodeList comparable v
 setByIndex idx val ls =
     case idx of
         0 ->
@@ -290,27 +292,38 @@ setByIndex idx val ls =
 
 hashPositionWithShift : Int -> Int -> Int
 hashPositionWithShift shift hash =
-    Bitwise.and (Bitwise.shiftRightLogical hash shift) 0x1F
+    Bitwise.and 0x1F <| Bitwise.shiftRightLogical hash shift
 
 
-get : Int -> Int -> k -> NodeList k v -> Node k v
+get : Int -> Int -> comparable -> NodeList comparable v -> Maybe v
 get shift hash key ls =
     let
         pos =
             hashPositionWithShift shift hash
 
-        val =
+        node =
             valueByIndex pos ls
     in
-        case val of
+        case node of
+            Element _ _ value ->
+                Just value
+
             SubTree nodes ->
                 get (shift + 5) hash key nodes
 
-            _ ->
-                val
+            Collision _ vals ->
+                case find (\( k, _ ) -> k == key) vals of
+                    Just ( _, value ) ->
+                        Just value
+
+                    Nothing ->
+                        Nothing
+
+            Empty ->
+                Nothing
 
 
-set : Int -> Int -> k -> v -> NodeList k v -> NodeList k v
+set : Int -> Int -> comparable -> v -> NodeList comparable v -> NodeList comparable v
 set shift hash key val ls =
     let
         pos =
@@ -327,14 +340,37 @@ set shift hash key val ls =
                 setByIndex pos (Element hash key val) ls
 
             Element xHash xKey xVal ->
-                {- OK for Arrays, bad for Dict and Set -}
                 if xHash == hash then
-                    setByIndex pos (Element hash key val) ls
+                    if xKey == key then
+                        setByIndex pos (Element hash key val) ls
+                    else
+                        let
+                            element =
+                                Collision hash
+                                    [ ( key, val ), ( xKey, xVal ) ]
+                        in
+                            setByIndex pos element ls
                 else
                     let
                         subNodes =
                             empty
                                 |> set newShift xHash xKey xVal
+                                |> set newShift hash key val
+                                |> SubTree
+                    in
+                        setByIndex pos subNodes ls
+
+            Collision xHash nodes ->
+                if xHash == hash then
+                    setByIndex pos (Collision hash (( key, val ) :: nodes)) ls
+                else
+                    let
+                        collisionPos =
+                            hashPositionWithShift newShift xHash
+
+                        subNodes =
+                            empty
+                                |> setByIndex collisionPos currValue
                                 |> set newShift hash key val
                                 |> SubTree
                     in
@@ -350,6 +386,6 @@ set shift hash key val ls =
                     setByIndex pos subNodes ls
 
 
-remove : Int -> NodeList k v -> NodeList k v
+remove : Int -> NodeList comparable v -> NodeList comparable v
 remove hash nl =
     nl
