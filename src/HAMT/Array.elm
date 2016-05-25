@@ -42,7 +42,7 @@ toIndexedList arr =
 push : a -> HArray a -> HArray a
 push a arr =
     { length = arr.length + 1
-    , nodes = NodeList.set 0 arr.length arr.length a arr.nodes
+    , nodes = NodeList.set arr.length arr.length a arr.nodes
     }
 
 
@@ -65,7 +65,7 @@ get idx arr =
     if idx >= arr.length || idx < 0 then
         Nothing
     else
-        NodeList.get 0 idx idx arr.nodes
+        NodeList.get idx idx arr.nodes
 
 
 set : Int -> a -> HArray a -> HArray a
@@ -73,7 +73,7 @@ set idx val arr =
     if idx >= arr.length || idx < 0 then
         arr
     else
-        { arr | nodes = NodeList.set 0 idx idx val arr.nodes }
+        { arr | nodes = NodeList.set idx idx val arr.nodes }
 
 
 foldr : (b -> a -> b) -> b -> HArray a -> b
@@ -86,7 +86,7 @@ foldr' folder acc idx arr =
     if idx == -1 then
         acc
     else
-        case NodeList.get 0 idx idx arr.nodes of
+        case NodeList.get idx idx arr.nodes of
             Just x ->
                 foldr' folder (folder acc x) (idx - 1) arr
 
@@ -104,7 +104,7 @@ foldl' folder acc idx arr =
     if idx == arr.length then
         acc
     else
-        case NodeList.get 0 idx idx arr.nodes of
+        case NodeList.get idx idx arr.nodes of
             Just x ->
                 foldl' folder (folder x acc) (idx + 1) arr
 
@@ -144,7 +144,7 @@ indexedMap' mapper acc idx arr =
     if idx == arr.length then
         acc
     else
-        case NodeList.get 0 idx idx arr.nodes of
+        case NodeList.get idx idx arr.nodes of
             Just x ->
                 indexedMap' mapper (push (mapper idx x) acc) (idx + 1) arr
 
@@ -172,7 +172,7 @@ slice' from to acc arr =
     if from == to then
         acc
     else
-        case NodeList.get 0 from from arr.nodes of
+        case NodeList.get from from arr.nodes of
             Just x ->
                 slice' (from + 1) to (push x acc) arr
 

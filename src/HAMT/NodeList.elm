@@ -295,8 +295,13 @@ hashPositionWithShift shift hash =
     Bitwise.and 0x1F <| Bitwise.shiftRightLogical hash shift
 
 
-get : Int -> Int -> comparable -> NodeList comparable v -> Maybe v
-get shift hash key ls =
+get : Int -> comparable -> NodeList comparable v -> Maybe v
+get hash key ls =
+    get' 0 hash key ls
+
+
+get' : Int -> Int -> comparable -> NodeList comparable v -> Maybe v
+get' shift hash key ls =
     let
         pos =
             hashPositionWithShift shift hash
@@ -309,7 +314,7 @@ get shift hash key ls =
                 Just value
 
             SubTree nodes ->
-                get (shift + 5) hash key nodes
+                get' (shift + 5) hash key nodes
 
             Collision _ vals ->
                 case find (\( k, _ ) -> k == key) vals of
@@ -323,8 +328,13 @@ get shift hash key ls =
                 Nothing
 
 
-set : Int -> Int -> comparable -> v -> NodeList comparable v -> NodeList comparable v
-set shift hash key val ls =
+set : Int -> comparable -> v -> NodeList comparable v -> NodeList comparable v
+set hash key val ls =
+    set' 0 hash key val ls
+
+
+set' : Int -> Int -> comparable -> v -> NodeList comparable v -> NodeList comparable v
+set' shift hash key val ls =
     let
         pos =
             hashPositionWithShift shift hash
@@ -354,8 +364,8 @@ set shift hash key val ls =
                     let
                         subNodes =
                             empty
-                                |> set newShift xHash xKey xVal
-                                |> set newShift hash key val
+                                |> set' newShift xHash xKey xVal
+                                |> set' newShift hash key val
                                 |> SubTree
                     in
                         setByIndex pos subNodes ls
@@ -371,7 +381,7 @@ set shift hash key val ls =
                         subNodes =
                             empty
                                 |> setByIndex collisionPos currValue
-                                |> set newShift hash key val
+                                |> set' newShift hash key val
                                 |> SubTree
                     in
                         setByIndex pos subNodes ls
@@ -380,7 +390,7 @@ set shift hash key val ls =
                 let
                     subNodes =
                         nodes
-                            |> set newShift hash key val
+                            |> set' newShift hash key val
                             |> SubTree
                 in
                     setByIndex pos subNodes ls

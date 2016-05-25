@@ -32,10 +32,10 @@ hashPath =
 collisionNodeList : NodeList String String
 collisionNodeList =
     empty
-        |> set 0 65 "Key1" "Val1"
-        |> set 0 65 "Key2" "Val2"
-        |> set 0 65 "Key2" "Val3"
-        |> set 0 64 "Key4" "Val4"
+        |> set 65 "Key1" "Val1"
+        |> set 65 "Key2" "Val2"
+        |> set 65 "Key2" "Val3"
+        |> set 64 "Key4" "Val4"
 
 
 collisionCheck : Test
@@ -43,11 +43,11 @@ collisionCheck =
     suite "CollisionCheck Tests"
         [ test "first key"
             <| assertEqual (Just "Val1")
-            <| get 0 65 "Key1" collisionNodeList
+            <| get 65 "Key1" collisionNodeList
         , test "second key"
             <| assertEqual (Just "Val3")
-            <| get 0 65 "Key2" collisionNodeList
+            <| get 65 "Key2" collisionNodeList
         , test "third key"
             <| assertEqual (Just "Val4")
-            <| get 0 64 "Key4" collisionNodeList
+            <| get 64 "Key4" collisionNodeList
         ]
