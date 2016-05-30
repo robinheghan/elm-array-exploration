@@ -56,7 +56,7 @@ pop arr =
                 arr.length - 1
         in
             { length = lastIndex
-            , nodes = NodeList.remove lastIndex arr.nodes
+            , nodes = NodeList.remove lastIndex lastIndex arr.nodes
             }
 
 

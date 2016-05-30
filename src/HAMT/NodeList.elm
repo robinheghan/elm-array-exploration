@@ -1,4 +1,12 @@
-module HAMT.NodeList exposing (..)
+module HAMT.NodeList
+    exposing
+        ( NodeList
+        , empty
+        , hashPositionWithShift
+        , get
+        , set
+        , remove
+        )
 
 import Bitwise
 import List.Extra exposing (find)
@@ -396,6 +404,54 @@ set' shift hash key val ls =
                     setByIndex pos subNodes ls
 
 
-remove : Int -> NodeList comparable v -> NodeList comparable v
-remove hash nl =
-    nl
+remove : Int -> comparable -> NodeList comparable v -> NodeList comparable v
+remove hash key nl =
+    remove' 0 hash key nl
+
+
+remove' : Int -> Int -> comparable -> NodeList comparable v -> NodeList comparable v
+remove' shift hash key nl =
+    let
+        pos =
+            hashPositionWithShift shift hash
+
+        node =
+            valueByIndex pos nl
+    in
+        case node of
+            Element _ eKey value ->
+                if eKey == key then
+                    setByIndex pos Empty nl
+                else
+                    nl
+
+            SubTree nodes ->
+                let
+                    newSub =
+                        remove' (shift + 5) hash key nodes
+                            |> SubTree
+                in
+                    setByIndex pos newSub nl
+
+            Collision _ vals ->
+                let
+                    newCollision =
+                        List.filter (\( k, _ ) -> k /= key) vals
+
+                    newLength =
+                        List.length newCollision
+                in
+                    if newLength == 0 then
+                        setByIndex pos Empty nl
+                    else if newLength == 1 then
+                        case List.head newCollision of
+                            Just ( k, v ) ->
+                                setByIndex pos (Element hash k v) nl
+
+                            Nothing ->
+                                nl
+                    else
+                        setByIndex pos (Collision hash newCollision) nl
+
+            Empty ->
+                nl
