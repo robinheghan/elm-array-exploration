@@ -1,7 +1,7 @@
 module HAMT.Dict exposing (..)
 
 import HAMT.NodeList as NodeList exposing (NodeList)
-import Hash
+import Murmur3
 
 
 type alias HDict comparable v =
@@ -12,7 +12,7 @@ type alias HDict comparable v =
 
 hashFn : a -> Int
 hashFn obj =
-    Hash.string 19456 <| toString obj
+    Murmur3.hashString 19456 <| toString obj
 
 
 empty : HDict comparable v
