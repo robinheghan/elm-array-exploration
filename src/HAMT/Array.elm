@@ -1,44 +1,151 @@
-module HAMT.Array exposing (..)
+module HAMT.Array
+    exposing
+        ( HArray
+        , empty
+        , isEmpty
+        , length
+        , initialize
+        , repeat
+        , fromList
+        , toList
+        , toIndexedList
+        , push
+        , pop
+        , get
+        , set
+        , foldr
+        , foldl
+        , append
+        , filter
+        , map
+        , indexedMap
+        , slice
+        )
+
+{-| Fast immutable arrays. The elements in an array must have the
+same type.
+
+# Arrays
+@docs HArray
+
+# Creation
+@docs empty, repeat, initialize, fromList
+
+# Query
+@docs isEmpty, length, get
+
+# Manipulate
+@docs set, push, pop, append, slice
+
+# Lists
+@docs toList, toIndexedList
+
+# Transform
+@docs map, indexedMap, filter, foldl, foldr
+-}
 
 import HAMT.NodeList as NodeList exposing (NodeList)
 
 
+{-| Representation of fast immutable arrays. You can create arrays of integers
+(`HArray Int`) or strings (`HArray String`) or any other type of value you can
+dream up.
+-}
 type alias HArray a =
     { length : Int
     , nodes : NodeList Int a
     }
 
 
+{-| Return an empty array.
+
+    length empty == 0
+-}
 empty : HArray a
 empty =
     HArray 0 NodeList.empty
 
 
+{-| Determine if an array is empty.
+
+    isEmpty empty == True
+-}
 isEmpty : HArray a -> Bool
 isEmpty arr =
     arr.length == 0
 
 
+{-| Return the length of an array.
+
+    length (fromList [1,2,3]) == 3
+-}
 length : HArray a -> Int
 length arr =
     arr.length
 
 
+{-| Initialize an array. `initialize n f` creates an array of length `n` with
+the element at index `i` initialized to the result of `(f i)`.
+
+    initialize 4 identity    == fromList [0,1,2,3]
+    initialize 4 (\n -> n*n) == fromList [0,1,4,9]
+    initialize 4 (always 0)  == fromList [0,0,0,0]
+-}
+initialize : Int -> (Int -> a) -> HArray a
+initialize stop f =
+    initialize' stop 0 f empty
+
+
+initialize' : Int -> Int -> (Int -> a) -> HArray a -> HArray a
+initialize' stop idx f acc =
+    if stop <= idx then
+        acc
+    else
+        initialize' stop (idx + 1) f <| push (f idx) acc
+
+
+{-| Creates an array with a given length, filled with a default element.
+
+    repeat 5 0     == fromList [0,0,0,0,0]
+    repeat 3 "cat" == fromList ["cat","cat","cat"]
+
+Notice that `repeat 3 x` is the same as `initialize 3 (always x)`.
+-}
+repeat : Int -> a -> HArray a
+repeat n e =
+    initialize n (always e)
+
+
+{-| Create an array from a list.
+-}
 fromList : List a -> HArray a
 fromList ls =
     List.foldl push empty ls
 
 
+{-| Create a list of elements from an array.
+
+    toList (fromList [3,5,8]) == [3,5,8]
+-}
 toList : HArray a -> List a
 toList arr =
     foldr (\acc n -> n :: acc) [] arr
 
 
+{-| Create an indexed list from an array. Each element of the array will be
+paired with its index.
+
+    toIndexedList (fromList ["cat","dog"]) == [(0,"cat"), (1,"dog")]
+-}
 toIndexedList : HArray a -> List ( Int, a )
 toIndexedList arr =
     List.map2 (,) [0..(arr.length - 1)] (toList arr)
 
 
+{-| Push an element to the end of an array.
+
+    push 3 (fromList [1,2]) == fromList [1,2,3]
+-}
 push : a -> HArray a -> HArray a
 push a arr =
     { length = arr.length + 1
@@ -46,6 +153,10 @@ push a arr =
     }
 
 
+{-| Remove the last element from the array.
+
+    pop (fromList [1,2]) == fromList [1]
+-}
 pop : HArray a -> HArray a
 pop arr =
     if isEmpty arr then
@@ -60,6 +171,13 @@ pop arr =
             }
 
 
+{-| Return Just the element at the index or Nothing if the index is out of range.
+
+    get  0 (fromList [0,1,2]) == Just 0
+    get  2 (fromList [0,1,2]) == Just 2
+    get  5 (fromList [0,1,2]) == Nothing
+    get -1 (fromList [0,1,2]) == Nothing
+-}
 get : Int -> HArray a -> Maybe a
 get idx arr =
     if idx >= arr.length || idx < 0 then
@@ -68,6 +186,11 @@ get idx arr =
         NodeList.get idx idx arr.nodes
 
 
+{-| Set the element at a particular index. Returns an updated array.
+If the index is out of range, the array is unaltered.
+
+    set 1 7 (fromList [1,2,3]) == fromList [1,7,3]
+-}
 set : Int -> a -> HArray a -> HArray a
 set idx val arr =
     if idx >= arr.length || idx < 0 then
@@ -76,6 +199,10 @@ set idx val arr =
         { arr | nodes = NodeList.set idx idx val arr.nodes }
 
 
+{-| Reduce an array from the right. Read `foldr` as fold from the right.
+
+    foldr (+) 0 (repeat 3 5) == 15
+-}
 foldr : (b -> a -> b) -> b -> HArray a -> b
 foldr folder init arr =
     foldr' folder init (arr.length - 1) arr
@@ -94,6 +221,10 @@ foldr' folder acc idx arr =
                 Debug.crash "This is a bug. Please report this."
 
 
+{-| Reduce an array from the left. Read `foldl` as fold from the left.
+
+    foldl (::) [] (fromList [1,2,3]) == [3,2,1]
+-}
 foldl : (a -> b -> b) -> b -> HArray a -> b
 foldl folder init arr =
     foldl' folder init 0 arr
@@ -112,11 +243,19 @@ foldl' folder acc idx arr =
                 Debug.crash "This is a bug. Please report this."
 
 
+{-| Append two arrays to a new one.
+
+    append (repeat 2 42) (repeat 3 81) == fromList [42,42,81,81,81]
+-}
 append : HArray a -> HArray a -> HArray a
 append a b =
     foldl push a b
 
 
+{-| Keep only elements that satisfy the predicate:
+
+    filter isEven (fromList [1..6]) == (fromList [2,4,6])
+-}
 filter : (a -> Bool) -> HArray a -> HArray a
 filter pred arr =
     let
@@ -129,11 +268,19 @@ filter pred arr =
         foldl update empty arr
 
 
+{-| Apply a function on every element in an array.
+
+    map sqrt (fromList [1,4,9]) == fromList [1,2,3]
+-}
 map : (a -> b) -> HArray a -> HArray b
 map mapper arr =
     foldl (\n acc -> push (mapper n) acc) empty arr
 
 
+{-| Apply a function on every element with its index as first argument.
+
+    indexedMap (*) (fromList [5,5,5]) == fromList [0,5,10]
+-}
 indexedMap : (Int -> a -> b) -> HArray a -> HArray b
 indexedMap mapper arr =
     indexedMap' mapper empty 0 arr
@@ -152,6 +299,22 @@ indexedMap' mapper acc idx arr =
                 Debug.crash "This is a bug. Please report this."
 
 
+{-| Get a sub-section of an array: `(slice start end array)`. The `start` is a
+zero-based index where we will start our slice. The `end` is a zero-based index
+that indicates the end of the slice. The slice extracts up to but not including
+`end`.
+
+    slice  0  3 (fromList [0,1,2,3,4]) == fromList [0,1,2]
+    slice  1  4 (fromList [0,1,2,3,4]) == fromList [1,2,3]
+
+Both the `start` and `end` indexes can be negative, indicating an offset from
+the end of the array.
+
+    slice  1 -1 (fromList [0,1,2,3,4]) == fromList [1,2,3]
+    slice -2  5 (fromList [0,1,2,3,4]) == fromList [3,4]
+
+This makes it pretty easy to `pop` the last element off of an array: `slice 0 -1 array`
+-}
 slice : Int -> Int -> HArray a -> HArray a
 slice from to arr =
     let

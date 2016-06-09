@@ -4,9 +4,13 @@
     "repository": "https://github.com/Skinney/hamt-collections.git",
     "license": "BSD3",
     "source-directories": [
-        "."
+        "src"
     ],
-    "exposed-modules": [],
+    "exposed-modules": [
+        "HAMT.Array",
+        "HAMT.Dict",
+        "HAMT.Set"
+    ],
     "dependencies": {
         "Skinney/murmur3": "2.0.0 <= v < 3.0.0",
         "elm-community/list-extra": "2.0.0 <= v < 3.0.0",

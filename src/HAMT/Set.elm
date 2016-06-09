@@ -23,18 +23,22 @@ module HAMT.Set
 {-| A set of unique values. The values can be any comparable type. This
 includes `Int`, `Float`, `Time`, `Char`, `String`, and tuples or lists
 of comparable types.
-Insert, remove, and query operations all take *O(log n)* time. Set equality with
-`(==)` is unreliable and should not be used.
+
 # Sets
-@docs Set
+@docs HSet
+
 # Build
 @docs empty, singleton, insert, remove
+
 # Query
 @docs isEmpty, member, size
+
 # Combine
 @docs union, intersect, diff
+
 # Lists
 @docs toList, fromList
+
 # Transform
 @docs map, foldl, foldr, filter, partition
 -}
@@ -42,16 +46,16 @@ Insert, remove, and query operations all take *O(log n)* time. Set equality with
 import HAMT.Dict as Dict
 
 
-{-| Represents a set of unique values. So `(Set Int)` is a set of integers and
-`(Set String)` is a set of strings.
+{-| Represents a set of unique values. So `(HSet Int)` is a set of integers and
+`(HSet String)` is a set of strings.
 -}
-type HSet t
-    = Dict.HDict t ()
+type alias HSet comparable =
+    Dict.HDict comparable ()
 
 
 {-| Create an empty set.
 -}
-empty : HSet a
+empty : HSet comparable
 empty =
     Dict.empty
 
@@ -79,7 +83,7 @@ remove k d =
 
 {-| Determine if a set is empty.
 -}
-isEmpty : HSet a -> Bool
+isEmpty : HSet comparable -> Bool
 isEmpty d =
     Dict.isEmpty d
 
@@ -93,7 +97,7 @@ member k d =
 
 {-| Determine the number of elements in a set.
 -}
-size : HSet a -> Int
+size : HSet comparable -> Int
 size d =
     Dict.size d
 
@@ -138,7 +142,7 @@ fromList xs =
 -}
 foldl : (comparable -> b -> b) -> b -> HSet comparable -> b
 foldl f b d =
-    Dict.foldl (\k _ b -> f k b) b d
+    Dict.foldr (\k _ b -> f k b) b d
 
 
 {-| Fold over the values in a set, in order from highest to lowest.

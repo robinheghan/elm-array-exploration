@@ -7,12 +7,21 @@ import ElmTest exposing (..)
 tests : Test
 tests =
     suite "Array tests"
-        [ isEmpty'
+        [ init'
+        , isEmpty'
         , length'
         , getSet
         , conversion
         , stack
         , transform
+        ]
+
+
+init' : Test
+init' =
+    suite "Initialization Tests"
+        [ test "initialize" <| assertEqual [ 0, 1, 2, 3 ] <| toList (initialize 4 identity)
+        , test "repeat" <| assertEqual [ 0, 0, 0 ] <| toList (repeat 3 0)
         ]
 
 

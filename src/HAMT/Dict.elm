@@ -1,9 +1,61 @@
-module HAMT.Dict exposing (..)
+module HAMT.Dict
+    exposing
+        ( HDict
+        , empty
+        , singleton
+        , isEmpty
+        , size
+        , get
+        , member
+        , insert
+        , update
+        , remove
+        , fromList
+        , toList
+        , keys
+        , values
+        , map
+        , foldl
+        , foldr
+        , filter
+        , partition
+        , union
+        , intersect
+        , diff
+        , merge
+        )
+
+{-| A dictionary mapping unique keys to values. The keys can be any comparable
+type. This includes `Int`, `Float`, `Time`, `Char`, `String`, and tuples or
+lists of comparable types.
+
+# Dictionary
+@docs HDict
+
+# Build
+@docs empty, singleton, insert, update, remove
+
+# Query
+@docs get, isEmpty, member, size
+
+# Combine
+@docs union, intersect, diff, merge
+
+# Lists
+@docs toList, fromList, keys, values
+
+# Transform
+@docs map, foldl, foldr, filter, partition
+-}
 
 import HAMT.NodeList as NodeList exposing (NodeList)
 import Murmur3
 
 
+{-| A dictionary of keys and values. So a `(HDict String User)` is a dictionary
+that lets you look up a `String` (such as user names) and find the associated
+`User`.
+-}
 type alias HDict comparable v =
     { size : Int
     , nodes : NodeList comparable v
@@ -15,31 +67,53 @@ hashFn obj =
     Murmur3.hashString 19456 <| toString obj
 
 
+{-| Create an empty dictionary.
+-}
 empty : HDict comparable v
 empty =
     HDict 0 NodeList.empty
 
 
+{-| Create a dictionary with one key-value pair.
+-}
 singleton : comparable -> v -> HDict comparable v
 singleton key val =
     insert key val empty
 
 
+{-| Determine if a dictionary is empty.
+
+    isEmpty empty == True
+-}
 isEmpty : HDict comparable v -> Bool
 isEmpty dict =
     dict.size == 0
 
 
+{-| Determine the number of key-value pairs in the dictionary.
+-}
 size : HDict comparable v -> Int
 size dict =
     dict.size
 
 
+{-| Get the value associated with a key. If the key is not found, return
+`Nothing`. This is useful when you are not sure if a key will be in the
+dictionary.
+
+    animals = fromList [ ("Tom", Cat), ("Jerry", Mouse) ]
+
+    get "Tom"   animals == Just Cat
+    get "Jerry" animals == Just Mouse
+    get "Spike" animals == Nothing
+-}
 get : comparable -> HDict comparable v -> Maybe v
 get key dict =
     NodeList.get (hashFn key) key dict.nodes
 
 
+{-| Determine if a key is in a dictionary.
+-}
 member : comparable -> HDict comparable v -> Bool
 member key dict =
     case get key dict of
@@ -50,6 +124,9 @@ member key dict =
             False
 
 
+{-| Insert a key-value pair into a dictionary. Replaces value when there is
+a collision.
+-}
 insert : comparable -> v -> HDict comparable v -> HDict comparable v
 insert key value dict =
     { size = dict.size + 1
@@ -57,6 +134,8 @@ insert key value dict =
     }
 
 
+{-| Update the value of a dictionary for a specific key with a given function.
+-}
 update : (Maybe v -> Maybe v) -> comparable -> HDict comparable v -> HDict comparable v
 update fn key dict =
     case fn <| get key dict of
@@ -67,6 +146,9 @@ update fn key dict =
             remove key dict
 
 
+{-| Remove a key-value pair from a dictionary. If the key is not found,
+no changes are made.
+-}
 remove : comparable -> HDict comparable v -> HDict comparable v
 remove key dict =
     { size = dict.size - 1
@@ -74,21 +156,37 @@ remove key dict =
     }
 
 
+
+-- LISTS
+
+
+{-| Convert an association list into a dictionary.
+-}
 fromList : List ( comparable, v ) -> HDict comparable v
 fromList list =
     List.foldl (\( key, value ) acc -> insert key value acc) empty list
 
 
+{-| Convert a dictionary into an association list of key-value pairs, sorted by keys.
+-}
 toList : HDict comparable v -> List ( comparable, v )
 toList dict =
     foldl (\k v acc -> ( k, v ) :: acc) [] dict
 
 
+{-| Get all of the keys in a dictionary, sorted from lowest to highest.
+
+    keys (fromList [(0,"Alice"),(1,"Bob")]) == [0,1]
+-}
 keys : HDict comparable v -> List comparable
 keys dict =
     foldl (\k _ acc -> k :: acc) [] dict
 
 
+{-| Get all of the values in a dictionary, in the order of their keys.
+
+    values (fromList [(0,"Alice"),(1,"Bob")]) == ["Alice", "Bob"]
+-}
 values : HDict comparable v -> List v
 values dict =
     foldl (\_ v acc -> v :: acc) [] dict
