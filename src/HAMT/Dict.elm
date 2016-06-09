@@ -20,6 +20,11 @@ empty =
     HDict 0 NodeList.empty
 
 
+singleton : comparable -> v -> HDict comparable v
+singleton key val =
+    insert key val empty
+
+
 isEmpty : HDict comparable v -> Bool
 isEmpty dict =
     dict.size == 0
@@ -45,11 +50,21 @@ member key dict =
             False
 
 
-set : comparable -> v -> HDict comparable v -> HDict comparable v
-set key value dict =
+insert : comparable -> v -> HDict comparable v -> HDict comparable v
+insert key value dict =
     { size = dict.size + 1
     , nodes = NodeList.set (hashFn key) key value dict.nodes
     }
+
+
+update : (Maybe v -> Maybe v) -> comparable -> HDict comparable v -> HDict comparable v
+update fn key dict =
+    case fn <| get key dict of
+        Just val ->
+            insert key val dict
+
+        Nothing ->
+            remove key dict
 
 
 remove : comparable -> HDict comparable v -> HDict comparable v
@@ -61,7 +76,7 @@ remove key dict =
 
 fromList : List ( comparable, v ) -> HDict comparable v
 fromList list =
-    List.foldl (\( key, value ) acc -> set key value acc) empty list
+    List.foldl (\( key, value ) acc -> insert key value acc) empty list
 
 
 toList : HDict comparable v -> List ( comparable, v )
