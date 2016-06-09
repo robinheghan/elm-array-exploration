@@ -14,6 +14,7 @@ tests =
     suite "NodeList tests"
         [ hashPath
         , collisionCheck
+        , foldlCheck
         ]
 
 
@@ -50,4 +51,26 @@ collisionCheck =
         , test "third key"
             <| assertEqual (Just "Val4")
             <| get 64 "Key4" collisionNodeList
+        ]
+
+
+foldlNodeList : NodeList String String
+foldlNodeList =
+    collisionNodeList
+        |> set 64 "Key5" "Val5"
+        |> set 31 "Key6" "Val6"
+
+
+foldlCheck : Test
+foldlCheck =
+    suite "Foldl tests"
+        [ test "can extract all values"
+            <| assertEqual
+                [ ( "Key6", "Val6" )
+                , ( "Key1", "Val1" )
+                , ( "Key2", "Val3" )
+                , ( "Key4", "Val4" )
+                , ( "Key5", "Val5" )
+                ]
+            <| foldl (\kv acc -> kv :: acc) [] foldlNodeList
         ]

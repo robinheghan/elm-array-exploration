@@ -6,6 +6,7 @@ module HAMT.NodeList
         , get
         , set
         , remove
+        , foldl
         )
 
 import Bitwise
@@ -380,7 +381,11 @@ set' shift hash key val ls =
 
             Collision xHash nodes ->
                 if xHash == hash then
-                    setByIndex pos (Collision hash (( key, val ) :: nodes)) ls
+                    let
+                        newNodes =
+                            List.filter (\( k, _ ) -> k /= key) nodes
+                    in
+                        setByIndex pos (Collision hash (( key, val ) :: newNodes)) ls
                 else
                     let
                         collisionPos =
@@ -455,3 +460,27 @@ remove' shift hash key nl =
 
             Empty ->
                 nl
+
+
+foldl : (( comparable, v ) -> a -> a) -> a -> NodeList comparable v -> a
+foldl folder acc nl =
+    foldl' folder acc 0 nl
+
+
+foldl' : (( comparable, v ) -> a -> a) -> a -> Int -> NodeList comparable v -> a
+foldl' folder acc pos nl =
+    if pos > 31 then
+        acc
+    else
+        case valueByIndex pos nl of
+            Empty ->
+                foldl' folder acc (pos + 1) nl
+
+            Element _ key val ->
+                foldl' folder (folder ( key, val ) acc) (pos + 1) nl
+
+            SubTree nodes ->
+                foldl' folder (foldl folder acc nodes) (pos + 1) nl
+
+            Collision _ vals ->
+                foldl' folder (List.foldl folder acc vals) (pos + 1) nl
