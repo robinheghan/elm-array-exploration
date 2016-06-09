@@ -72,5 +72,5 @@ foldlCheck =
                 , ( "Key4", "Val4" )
                 , ( "Key5", "Val5" )
                 ]
-            <| foldl (\kv acc -> kv :: acc) [] foldlNodeList
+            <| foldl (\k v acc -> ( k, v ) :: acc) [] foldlNodeList
         ]

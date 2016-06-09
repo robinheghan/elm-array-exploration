@@ -319,6 +319,9 @@ get' shift hash key ls =
             valueByIndex pos ls
     in
         case node of
+            Empty ->
+                Nothing
+
             Element _ _ value ->
                 Just value
 
@@ -332,9 +335,6 @@ get' shift hash key ls =
 
                     Nothing ->
                         Nothing
-
-            Empty ->
-                Nothing
 
 
 set : Int -> comparable -> v -> NodeList comparable v -> NodeList comparable v
@@ -424,6 +424,9 @@ remove' shift hash key nl =
             valueByIndex pos nl
     in
         case node of
+            Empty ->
+                nl
+
             Element _ eKey value ->
                 if eKey == key then
                     setByIndex pos Empty nl
@@ -458,16 +461,13 @@ remove' shift hash key nl =
                     else
                         setByIndex pos (Collision hash newCollision) nl
 
-            Empty ->
-                nl
 
-
-foldl : (( comparable, v ) -> a -> a) -> a -> NodeList comparable v -> a
+foldl : (comparable -> v -> a -> a) -> a -> NodeList comparable v -> a
 foldl folder acc nl =
     foldl' folder acc 0 nl
 
 
-foldl' : (( comparable, v ) -> a -> a) -> a -> Int -> NodeList comparable v -> a
+foldl' : (comparable -> v -> a -> a) -> a -> Int -> NodeList comparable v -> a
 foldl' folder acc pos nl =
     if pos > 31 then
         acc
@@ -477,10 +477,14 @@ foldl' folder acc pos nl =
                 foldl' folder acc (pos + 1) nl
 
             Element _ key val ->
-                foldl' folder (folder ( key, val ) acc) (pos + 1) nl
+                foldl' folder (folder key val acc) (pos + 1) nl
 
             SubTree nodes ->
                 foldl' folder (foldl folder acc nodes) (pos + 1) nl
 
             Collision _ vals ->
-                foldl' folder (List.foldl folder acc vals) (pos + 1) nl
+                let
+                    colFold ( k, v ) acc =
+                        folder k v acc
+                in
+                    foldl' folder (List.foldl colFold acc vals) (pos + 1) nl

@@ -10,6 +10,7 @@ tests =
         [ emptyTests
         , sizeTests
         , getSetTests
+        , conversionTests
         ]
 
 
@@ -73,4 +74,19 @@ getSetTests =
         , test "member nonexist"
             <| assertEqual False
             <| member "Key4" simpleDict
+        ]
+
+
+conversionTests : Test
+conversionTests =
+    suite "Conversion"
+        [ test "toList"
+            <| assertEqual [ ( "Key2", "Val2" ), ( "Key1", "Val1" ), ( "Key3", "Val3" ) ]
+            <| toList simpleDict
+        , test "keys"
+            <| assertEqual [ "Key2", "Key1", "Key3" ]
+            <| keys simpleDict
+        , test "values"
+            <| assertEqual [ "Val2", "Val1", "Val3" ]
+            <| values simpleDict
         ]
