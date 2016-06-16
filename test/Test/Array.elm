@@ -1,6 +1,6 @@
 module Test.Array exposing (tests)
 
-import HAMT.Array exposing (..)
+import CollectionsNg.Array exposing (..)
 import ElmTest exposing (..)
 
 

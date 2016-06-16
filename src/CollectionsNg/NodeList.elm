@@ -1,4 +1,4 @@
-module HAMT.NodeList
+module CollectionsNg.NodeList
     exposing
         ( NodeList
         , empty

@@ -1,6 +1,6 @@
 module Test.Dict exposing (tests)
 
-import HAMT.Dict exposing (..)
+import CollectionsNg.Dict exposing (..)
 import ElmTest exposing (..)
 
 
@@ -14,7 +14,7 @@ tests =
         ]
 
 
-simpleDict : HDict String String
+simpleDict : Dict String String
 simpleDict =
     fromList
         [ ( "Key1", "Val1" )

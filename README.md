@@ -1,4 +1,4 @@
-# HAMT Collections
+# CollectionsNg
 
 A Hash Array Mapped Trie implementation of Array, Dict and Set in Elm.
 Look towards the bottom of this document for a description of the implementation,
@@ -6,23 +6,13 @@ and ideas for further improvements.
 
 ## Usage
 
-The collections are API compatible with the similarly named collections in `elm-core`.
-All you have to do is change some `import` statements and some type information.
-
-The big difference from the collections in `elm-core` is that equality (`==`) works.
+The collections are API compatible with their namesakes in `elm-core`.
+All you have to do is change some `import` statements.
 
 ## Code shared
 
 This code makes liberal use of code from `elm-core`. The `Set` implementation is more
 or less the exact same code, the same goes for a lot of documentation comments.
-
-## Rationale
-
-There are several reasons why I decided to write this library. The biggest of those
-reasons is that I wanted to learn Elm and the workings of the HAMT data structure,
-which is heavily used in both Clojure and Scala. Another big reason was that `Array`
-in `elm-core` has some bugs, and that equality is known not to work with `Dict` and
-`Set`.
 
 ## Todo
 
@@ -38,7 +28,7 @@ Clojure and Scala. The goal of this project was to implement the data structure 
 nothing but pure Elm, which presented some challenges.
 
 Before describing the Elm specific challenges, let's first discuss how a HAMT works.
-You can read the actual implementation in `src/HAMT/NodeList.elm`.
+You can read the actual implementation in `src/CollectionsNg/NodeList.elm`.
 
 The key component behind every hash-based data structure, is a hash. A hash is a simple
 integer that represents a value. Equal values always have the same hash, while different
@@ -139,4 +129,4 @@ each field manually.
 
 ## License
 
-This library uses the MIT License. See LICENSE for more information.
+This library uses the BSD3 License. See LICENSE for more information.

@@ -1,6 +1,6 @@
-module HAMT.Dict
+module CollectionsNg.Dict
     exposing
-        ( HDict
+        ( Dict
         , empty
         , singleton
         , isEmpty
@@ -30,7 +30,7 @@ type. This includes `Int`, `Float`, `Time`, `Char`, `String`, and tuples or
 lists of comparable types.
 
 # Dictionary
-@docs HDict
+@docs Dict
 
 # Build
 @docs empty, singleton, insert, update, remove
@@ -48,15 +48,15 @@ lists of comparable types.
 @docs map, foldl, foldr, filter, partition
 -}
 
-import HAMT.NodeList as NodeList exposing (NodeList)
+import CollectionsNg.NodeList as NodeList exposing (NodeList)
 import Murmur3
 
 
-{-| A dictionary of keys and values. So a `(HDict String User)` is a dictionary
+{-| A dictionary of keys and values. So a `(Dict String User)` is a dictionary
 that lets you look up a `String` (such as user names) and find the associated
 `User`.
 -}
-type alias HDict comparable v =
+type alias Dict comparable v =
     { size : Int
     , nodes : NodeList comparable v
     }
@@ -69,14 +69,14 @@ hashFn obj =
 
 {-| Create an empty dictionary.
 -}
-empty : HDict comparable v
+empty : Dict comparable v
 empty =
-    HDict 0 NodeList.empty
+    Dict 0 NodeList.empty
 
 
 {-| Create a dictionary with one key-value pair.
 -}
-singleton : comparable -> v -> HDict comparable v
+singleton : comparable -> v -> Dict comparable v
 singleton key val =
     insert key val empty
 
@@ -85,14 +85,14 @@ singleton key val =
 
     isEmpty empty == True
 -}
-isEmpty : HDict comparable v -> Bool
+isEmpty : Dict comparable v -> Bool
 isEmpty dict =
     dict.size == 0
 
 
 {-| Determine the number of key-value pairs in the dictionary.
 -}
-size : HDict comparable v -> Int
+size : Dict comparable v -> Int
 size dict =
     dict.size
 
@@ -107,14 +107,14 @@ dictionary.
     get "Jerry" animals == Just Mouse
     get "Spike" animals == Nothing
 -}
-get : comparable -> HDict comparable v -> Maybe v
+get : comparable -> Dict comparable v -> Maybe v
 get key dict =
     NodeList.get (hashFn key) key dict.nodes
 
 
 {-| Determine if a key is in a dictionary.
 -}
-member : comparable -> HDict comparable v -> Bool
+member : comparable -> Dict comparable v -> Bool
 member key dict =
     case get key dict of
         Just _ ->
@@ -127,7 +127,7 @@ member key dict =
 {-| Insert a key-value pair into a dictionary. Replaces value when there is
 a collision.
 -}
-insert : comparable -> v -> HDict comparable v -> HDict comparable v
+insert : comparable -> v -> Dict comparable v -> Dict comparable v
 insert key value dict =
     { size = dict.size + 1
     , nodes = NodeList.set (hashFn key) key value dict.nodes
@@ -136,7 +136,7 @@ insert key value dict =
 
 {-| Update the value of a dictionary for a specific key with a given function.
 -}
-update : (Maybe v -> Maybe v) -> comparable -> HDict comparable v -> HDict comparable v
+update : (Maybe v -> Maybe v) -> comparable -> Dict comparable v -> Dict comparable v
 update fn key dict =
     case fn <| get key dict of
         Just val ->
@@ -149,7 +149,7 @@ update fn key dict =
 {-| Remove a key-value pair from a dictionary. If the key is not found,
 no changes are made.
 -}
-remove : comparable -> HDict comparable v -> HDict comparable v
+remove : comparable -> Dict comparable v -> Dict comparable v
 remove key dict =
     { size = dict.size - 1
     , nodes = NodeList.remove (hashFn key) key dict.nodes
@@ -162,14 +162,14 @@ remove key dict =
 
 {-| Convert an association list into a dictionary.
 -}
-fromList : List ( comparable, v ) -> HDict comparable v
+fromList : List ( comparable, v ) -> Dict comparable v
 fromList list =
     List.foldl (\( key, value ) acc -> insert key value acc) empty list
 
 
 {-| Convert a dictionary into an association list of key-value pairs, sorted by keys.
 -}
-toList : HDict comparable v -> List ( comparable, v )
+toList : Dict comparable v -> List ( comparable, v )
 toList dict =
     foldl (\k v acc -> ( k, v ) :: acc) [] dict
 
@@ -178,7 +178,7 @@ toList dict =
 
     keys (fromList [(0,"Alice"),(1,"Bob")]) == [0,1]
 -}
-keys : HDict comparable v -> List comparable
+keys : Dict comparable v -> List comparable
 keys dict =
     foldl (\k _ acc -> k :: acc) [] dict
 
@@ -187,7 +187,7 @@ keys dict =
 
     values (fromList [(0,"Alice"),(1,"Bob")]) == ["Alice", "Bob"]
 -}
-values : HDict comparable v -> List v
+values : Dict comparable v -> List v
 values dict =
     foldl (\_ v acc -> v :: acc) [] dict
 
@@ -198,7 +198,7 @@ values dict =
 
 {-| Apply a function to all values in a dictionary.
 -}
-map : (comparable -> a -> b) -> HDict comparable a -> HDict comparable b
+map : (comparable -> a -> b) -> Dict comparable a -> Dict comparable b
 map f dict =
     NodeList.foldl (\key val acc -> insert key (f key val) acc) empty dict.nodes
 
@@ -206,7 +206,7 @@ map f dict =
 {-| Fold over the key-value pairs in a dictionary, in order from lowest
 key to highest key.
 -}
-foldl : (comparable -> v -> b -> b) -> b -> HDict comparable v -> b
+foldl : (comparable -> v -> b -> b) -> b -> Dict comparable v -> b
 foldl f acc dict =
     NodeList.foldl f acc dict.nodes
 
@@ -214,14 +214,14 @@ foldl f acc dict =
 {-| Fold over the key-value pairs in a dictionary, in order from highest
 key to lowest key.
 -}
-foldr : (comparable -> v -> b -> b) -> b -> HDict comparable v -> b
+foldr : (comparable -> v -> b -> b) -> b -> Dict comparable v -> b
 foldr f acc t =
     NodeList.foldl f acc t.nodes
 
 
 {-| Keep a key-value pair when it satisfies a predicate.
 -}
-filter : (comparable -> v -> Bool) -> HDict comparable v -> HDict comparable v
+filter : (comparable -> v -> Bool) -> Dict comparable v -> Dict comparable v
 filter predicate dictionary =
     let
         add key value dict =
@@ -237,7 +237,7 @@ filter predicate dictionary =
 contains all key-value pairs which satisfy the predicate, and the second
 contains the rest.
 -}
-partition : (comparable -> v -> Bool) -> HDict comparable v -> ( HDict comparable v, HDict comparable v )
+partition : (comparable -> v -> Bool) -> Dict comparable v -> ( Dict comparable v, Dict comparable v )
 partition predicate dict =
     let
         add key value ( t1, t2 ) =
@@ -256,22 +256,22 @@ partition predicate dict =
 {-| Combine two dictionaries. If there is a collision, preference is given
 to the first dictionary.
 -}
-union : HDict comparable v -> HDict comparable v -> HDict comparable v
+union : Dict comparable v -> Dict comparable v -> Dict comparable v
 union t1 t2 =
     foldl insert t2 t1
 
 
-{-| Keep a key-value pair when its key appears in the second HDictionary.
-Preference is given to values in the first HDictionary.
+{-| Keep a key-value pair when its key appears in the second Dictionary.
+Preference is given to values in the first Dictionary.
 -}
-intersect : HDict comparable v -> HDict comparable v -> HDict comparable v
+intersect : Dict comparable v -> Dict comparable v -> Dict comparable v
 intersect t1 t2 =
     filter (\k _ -> member k t2) t1
 
 
-{-| Keep a key-value pair when its key does not appear in the second HDictionary.
+{-| Keep a key-value pair when its key does not appear in the second Dictionary.
 -}
-diff : HDict comparable v -> HDict comparable v -> HDict comparable v
+diff : Dict comparable v -> Dict comparable v -> Dict comparable v
 diff t1 t2 =
     foldl (\k v t -> remove k t) t1 t2
 
@@ -288,8 +288,8 @@ merge :
     (comparable -> a -> result -> result)
     -> (comparable -> a -> b -> result -> result)
     -> (comparable -> b -> result -> result)
-    -> HDict comparable a
-    -> HDict comparable b
+    -> Dict comparable a
+    -> Dict comparable b
     -> result
     -> result
 merge leftStep bothStep rightStep leftDict rightDict initialResult =

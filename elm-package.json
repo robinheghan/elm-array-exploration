@@ -1,15 +1,15 @@
 {
     "version": "1.0.0",
-    "summary": "HAMT implementation of Array, Set and Dict for Elm.",
-    "repository": "https://github.com/Skinney/hamt-collections.git",
+    "summary": "Stable Array, Dict and Set implementations for Elm.",
+    "repository": "https://github.com/Skinney/collections-ng.git",
     "license": "BSD3",
     "source-directories": [
         "src"
     ],
     "exposed-modules": [
-        "HAMT.Array",
-        "HAMT.Dict",
-        "HAMT.Set"
+        "CollectionsNg.Array",
+        "CollectionsNg.Dict",
+        "CollectionsNg.Set"
     ],
     "dependencies": {
         "Skinney/murmur3": "2.0.0 <= v < 3.0.0",

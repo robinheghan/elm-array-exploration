@@ -1,6 +1,6 @@
-module HAMT.Array
+module CollectionsNg.Array
     exposing
-        ( HArray
+        ( Array
         , empty
         , isEmpty
         , length
@@ -26,7 +26,7 @@ module HAMT.Array
 same type.
 
 # Arrays
-@docs HArray
+@docs Array
 
 # Creation
 @docs empty, repeat, initialize, fromList
@@ -44,14 +44,14 @@ same type.
 @docs map, indexedMap, filter, foldl, foldr
 -}
 
-import HAMT.NodeList as NodeList exposing (NodeList)
+import CollectionsNg.NodeList as NodeList exposing (NodeList)
 
 
 {-| Representation of fast immutable arrays. You can create arrays of integers
-(`HArray Int`) or strings (`HArray String`) or any other type of value you can
+(`Array Int`) or strings (`Array String`) or any other type of value you can
 dream up.
 -}
-type alias HArray a =
+type alias Array a =
     { length : Int
     , nodes : NodeList Int a
     }
@@ -61,16 +61,16 @@ type alias HArray a =
 
     length empty == 0
 -}
-empty : HArray a
+empty : Array a
 empty =
-    HArray 0 NodeList.empty
+    Array 0 NodeList.empty
 
 
 {-| Determine if an array is empty.
 
     isEmpty empty == True
 -}
-isEmpty : HArray a -> Bool
+isEmpty : Array a -> Bool
 isEmpty arr =
     arr.length == 0
 
@@ -79,7 +79,7 @@ isEmpty arr =
 
     length (fromList [1,2,3]) == 3
 -}
-length : HArray a -> Int
+length : Array a -> Int
 length arr =
     arr.length
 
@@ -91,12 +91,12 @@ the element at index `i` initialized to the result of `(f i)`.
     initialize 4 (\n -> n*n) == fromList [0,1,4,9]
     initialize 4 (always 0)  == fromList [0,0,0,0]
 -}
-initialize : Int -> (Int -> a) -> HArray a
+initialize : Int -> (Int -> a) -> Array a
 initialize stop f =
     initialize' stop 0 f empty
 
 
-initialize' : Int -> Int -> (Int -> a) -> HArray a -> HArray a
+initialize' : Int -> Int -> (Int -> a) -> Array a -> Array a
 initialize' stop idx f acc =
     if stop <= idx then
         acc
@@ -111,14 +111,14 @@ initialize' stop idx f acc =
 
 Notice that `repeat 3 x` is the same as `initialize 3 (always x)`.
 -}
-repeat : Int -> a -> HArray a
+repeat : Int -> a -> Array a
 repeat n e =
     initialize n (always e)
 
 
 {-| Create an array from a list.
 -}
-fromList : List a -> HArray a
+fromList : List a -> Array a
 fromList ls =
     List.foldl push empty ls
 
@@ -127,7 +127,7 @@ fromList ls =
 
     toList (fromList [3,5,8]) == [3,5,8]
 -}
-toList : HArray a -> List a
+toList : Array a -> List a
 toList arr =
     foldr (\acc n -> n :: acc) [] arr
 
@@ -137,7 +137,7 @@ paired with its index.
 
     toIndexedList (fromList ["cat","dog"]) == [(0,"cat"), (1,"dog")]
 -}
-toIndexedList : HArray a -> List ( Int, a )
+toIndexedList : Array a -> List ( Int, a )
 toIndexedList arr =
     List.map2 (,) [0..(arr.length - 1)] (toList arr)
 
@@ -146,7 +146,7 @@ toIndexedList arr =
 
     push 3 (fromList [1,2]) == fromList [1,2,3]
 -}
-push : a -> HArray a -> HArray a
+push : a -> Array a -> Array a
 push a arr =
     { length = arr.length + 1
     , nodes = NodeList.set arr.length arr.length a arr.nodes
@@ -157,7 +157,7 @@ push a arr =
 
     pop (fromList [1,2]) == fromList [1]
 -}
-pop : HArray a -> HArray a
+pop : Array a -> Array a
 pop arr =
     if isEmpty arr then
         arr
@@ -178,7 +178,7 @@ pop arr =
     get  5 (fromList [0,1,2]) == Nothing
     get -1 (fromList [0,1,2]) == Nothing
 -}
-get : Int -> HArray a -> Maybe a
+get : Int -> Array a -> Maybe a
 get idx arr =
     if idx >= arr.length || idx < 0 then
         Nothing
@@ -191,7 +191,7 @@ If the index is out of range, the array is unaltered.
 
     set 1 7 (fromList [1,2,3]) == fromList [1,7,3]
 -}
-set : Int -> a -> HArray a -> HArray a
+set : Int -> a -> Array a -> Array a
 set idx val arr =
     if idx >= arr.length || idx < 0 then
         arr
@@ -203,12 +203,12 @@ set idx val arr =
 
     foldr (+) 0 (repeat 3 5) == 15
 -}
-foldr : (b -> a -> b) -> b -> HArray a -> b
+foldr : (b -> a -> b) -> b -> Array a -> b
 foldr folder init arr =
     foldr' folder init (arr.length - 1) arr
 
 
-foldr' : (b -> a -> b) -> b -> Int -> HArray a -> b
+foldr' : (b -> a -> b) -> b -> Int -> Array a -> b
 foldr' folder acc idx arr =
     if idx == -1 then
         acc
@@ -225,12 +225,12 @@ foldr' folder acc idx arr =
 
     foldl (::) [] (fromList [1,2,3]) == [3,2,1]
 -}
-foldl : (a -> b -> b) -> b -> HArray a -> b
+foldl : (a -> b -> b) -> b -> Array a -> b
 foldl folder init arr =
     foldl' folder init 0 arr
 
 
-foldl' : (a -> b -> b) -> b -> Int -> HArray a -> b
+foldl' : (a -> b -> b) -> b -> Int -> Array a -> b
 foldl' folder acc idx arr =
     if idx == arr.length then
         acc
@@ -247,7 +247,7 @@ foldl' folder acc idx arr =
 
     append (repeat 2 42) (repeat 3 81) == fromList [42,42,81,81,81]
 -}
-append : HArray a -> HArray a -> HArray a
+append : Array a -> Array a -> Array a
 append a b =
     foldl push a b
 
@@ -256,7 +256,7 @@ append a b =
 
     filter isEven (fromList [1..6]) == (fromList [2,4,6])
 -}
-filter : (a -> Bool) -> HArray a -> HArray a
+filter : (a -> Bool) -> Array a -> Array a
 filter pred arr =
     let
         update n acc =
@@ -272,7 +272,7 @@ filter pred arr =
 
     map sqrt (fromList [1,4,9]) == fromList [1,2,3]
 -}
-map : (a -> b) -> HArray a -> HArray b
+map : (a -> b) -> Array a -> Array b
 map mapper arr =
     foldl (\n acc -> push (mapper n) acc) empty arr
 
@@ -281,12 +281,12 @@ map mapper arr =
 
     indexedMap (*) (fromList [5,5,5]) == fromList [0,5,10]
 -}
-indexedMap : (Int -> a -> b) -> HArray a -> HArray b
+indexedMap : (Int -> a -> b) -> Array a -> Array b
 indexedMap mapper arr =
     indexedMap' mapper empty 0 arr
 
 
-indexedMap' : (Int -> a -> b) -> HArray b -> Int -> HArray a -> HArray b
+indexedMap' : (Int -> a -> b) -> Array b -> Int -> Array a -> Array b
 indexedMap' mapper acc idx arr =
     if idx == arr.length then
         acc
@@ -315,7 +315,7 @@ the end of the array.
 
 This makes it pretty easy to `pop` the last element off of an array: `slice 0 -1 array`
 -}
-slice : Int -> Int -> HArray a -> HArray a
+slice : Int -> Int -> Array a -> Array a
 slice from to arr =
     let
         correctFrom =
@@ -330,7 +330,7 @@ slice from to arr =
             slice' correctFrom (correctTo + 1) empty arr
 
 
-slice' : Int -> Int -> HArray a -> HArray a -> HArray a
+slice' : Int -> Int -> Array a -> Array a -> Array a
 slice' from to acc arr =
     if from == to then
         acc
@@ -343,7 +343,7 @@ slice' from to acc arr =
                 Debug.crash "This is a bug. Please report this."
 
 
-translateIndex : Int -> HArray a -> Int
+translateIndex : Int -> Array a -> Int
 translateIndex idx arr =
     let
         posIndex =

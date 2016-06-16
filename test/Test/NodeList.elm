@@ -1,6 +1,6 @@
 module Test.NodeList exposing (tests)
 
-import HAMT.NodeList exposing (..)
+import CollectionsNg.NodeList exposing (..)
 import ElmTest exposing (..)
 
 
