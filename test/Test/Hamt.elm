@@ -1,6 +1,6 @@
-module Test.NodeList exposing (tests)
+module Test.Hamt exposing (tests)
 
-import CollectionsNg.NodeList exposing (..)
+import CollectionsNg.Hamt exposing (..)
 import ElmTest exposing (..)
 
 
@@ -11,7 +11,7 @@ hash =
 
 tests : Test
 tests =
-    suite "NodeList tests"
+    suite "Hamt tests"
         [ hashPath
         , bitCount
         , collisionCheck
@@ -45,8 +45,8 @@ bitCount =
         ]
 
 
-collisionNodeList : NodeList String String
-collisionNodeList =
+collisionHamt : Tree String String
+collisionHamt =
     empty
         |> set 65 "Key1" "Val1"
         |> set 65 "Key2" "Val2"
@@ -59,19 +59,19 @@ collisionCheck =
     suite "CollisionCheck Tests"
         [ test "first key"
             <| assertEqual (Just "Val1")
-            <| get 65 "Key1" collisionNodeList
+            <| get 65 "Key1" collisionHamt
         , test "second key"
             <| assertEqual (Just "Val3")
-            <| get 65 "Key2" collisionNodeList
+            <| get 65 "Key2" collisionHamt
         , test "third key"
             <| assertEqual (Just "Val4")
-            <| get 64 "Key4" collisionNodeList
+            <| get 64 "Key4" collisionHamt
         ]
 
 
-foldlNodeList : NodeList String String
-foldlNodeList =
-    collisionNodeList
+foldlHamt : Tree String String
+foldlHamt =
+    collisionHamt
         |> set 64 "Key5" "Val5"
         |> set 31 "Key6" "Val6"
 
@@ -87,12 +87,12 @@ foldlCheck =
                 , ( "Key5", "Val5" )
                 , ( "Key4", "Val4" )
                 ]
-            <| foldl (\k v acc -> ( k, v ) :: acc) [] foldlNodeList
+            <| foldl (\k v acc -> ( k, v ) :: acc) [] foldlHamt
         ]
 
 
-equalityNodeList : NodeList String Int
-equalityNodeList =
+equalityHamt : Tree String Int
+equalityHamt =
     empty
         |> set 5 "SimpleElement" 0
         |> set 1 "Sub" 4
@@ -103,9 +103,9 @@ equalityNodeList =
         |> set 34 "ToCollide2" 5
 
 
-equalityNodeList' : NodeList String Int
-equalityNodeList' =
-    equalityNodeList
+equalityHamt' : Tree String Int
+equalityHamt' =
+    equalityHamt
         |> remove 5 "SimpleElement"
         |> set 5 "SimpleElement" 0
         |> set 257 "Sub2" 4
@@ -119,4 +119,4 @@ equalityNodeList' =
 equalityCheck : Test
 equalityCheck =
     suite "Equality"
-        [ test "should be equal" <| assertEqual equalityNodeList equalityNodeList' ]
+        [ test "should be equal" <| assertEqual equalityHamt equalityHamt' ]

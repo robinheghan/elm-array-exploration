@@ -44,7 +44,7 @@ same type.
 @docs map, indexedMap, filter, foldl, foldr
 -}
 
-import CollectionsNg.NodeList as NodeList exposing (NodeList)
+import CollectionsNg.Hamt as Hamt exposing (Tree)
 
 
 {-| Representation of fast immutable arrays. You can create arrays of integers
@@ -53,7 +53,7 @@ dream up.
 -}
 type alias Array a =
     { length : Int
-    , nodes : NodeList Int a
+    , nodes : Tree Int a
     }
 
 
@@ -63,7 +63,7 @@ type alias Array a =
 -}
 empty : Array a
 empty =
-    Array 0 NodeList.empty
+    Array 0 Hamt.empty
 
 
 {-| Determine if an array is empty.
@@ -149,7 +149,7 @@ toIndexedList arr =
 push : a -> Array a -> Array a
 push a arr =
     { length = arr.length + 1
-    , nodes = NodeList.set arr.length arr.length a arr.nodes
+    , nodes = Hamt.set arr.length arr.length a arr.nodes
     }
 
 
@@ -167,7 +167,7 @@ pop arr =
                 arr.length - 1
         in
             { length = lastIndex
-            , nodes = NodeList.remove lastIndex lastIndex arr.nodes
+            , nodes = Hamt.remove lastIndex lastIndex arr.nodes
             }
 
 
@@ -183,7 +183,7 @@ get idx arr =
     if idx >= arr.length || idx < 0 then
         Nothing
     else
-        NodeList.get idx idx arr.nodes
+        Hamt.get idx idx arr.nodes
 
 
 {-| Set the element at a particular index. Returns an updated array.
@@ -196,7 +196,7 @@ set idx val arr =
     if idx >= arr.length || idx < 0 then
         arr
     else
-        { arr | nodes = NodeList.set idx idx val arr.nodes }
+        { arr | nodes = Hamt.set idx idx val arr.nodes }
 
 
 {-| Reduce an array from the right. Read `foldr` as fold from the right.
@@ -213,7 +213,7 @@ foldr' folder acc idx arr =
     if idx == -1 then
         acc
     else
-        case NodeList.get idx idx arr.nodes of
+        case Hamt.get idx idx arr.nodes of
             Just x ->
                 foldr' folder (folder acc x) (idx - 1) arr
 
@@ -235,7 +235,7 @@ foldl' folder acc idx arr =
     if idx == arr.length then
         acc
     else
-        case NodeList.get idx idx arr.nodes of
+        case Hamt.get idx idx arr.nodes of
             Just x ->
                 foldl' folder (folder x acc) (idx + 1) arr
 
@@ -291,7 +291,7 @@ indexedMap' mapper acc idx arr =
     if idx == arr.length then
         acc
     else
-        case NodeList.get idx idx arr.nodes of
+        case Hamt.get idx idx arr.nodes of
             Just x ->
                 indexedMap' mapper (push (mapper idx x) acc) (idx + 1) arr
 
@@ -335,7 +335,7 @@ slice' from to acc arr =
     if from == to then
         acc
     else
-        case NodeList.get from from arr.nodes of
+        case Hamt.get from from arr.nodes of
             Just x ->
                 slice' (from + 1) to (push x acc) arr
 

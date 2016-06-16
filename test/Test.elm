@@ -1,7 +1,7 @@
 module Main exposing (..)
 
 import ElmTest exposing (..)
-import Test.NodeList
+import Test.Hamt
 import Test.Array
 import Test.Dict
 
@@ -9,7 +9,7 @@ import Test.Dict
 tests : Test
 tests =
     suite "Elm Collection Tests"
-        [ Test.NodeList.tests
+        [ Test.Hamt.tests
         , Test.Array.tests
         , Test.Dict.tests
         ]

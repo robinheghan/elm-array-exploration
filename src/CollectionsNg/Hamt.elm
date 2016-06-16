@@ -1,6 +1,6 @@
-module CollectionsNg.NodeList
+module CollectionsNg.Hamt
     exposing
-        ( NodeList
+        ( Tree
         , empty
         , hashPositionWithShift
         , countBits
@@ -14,7 +14,7 @@ import Bitwise
 import List.Extra exposing (find)
 
 
-type alias NodeList comparable v =
+type alias Tree comparable v =
     { positionMap : Int
     , i0 : Node comparable v
     , i1 : Node comparable v
@@ -52,13 +52,13 @@ type alias NodeList comparable v =
 
 
 type Node comparable v
-    = Element Int comparable v
-    | SubTree (NodeList comparable v)
+    = Empty
+    | Element Int comparable v
+    | SubTree (Tree comparable v)
     | Collision Int (List ( comparable, v ))
-    | Empty
 
 
-empty : NodeList comparable v
+empty : Tree comparable v
 empty =
     { positionMap = 0
     , i0 = Empty
@@ -96,7 +96,7 @@ empty =
     }
 
 
-valueByIndex : Int -> NodeList comparable v -> Node comparable v
+valueByIndex : Int -> Tree comparable v -> Node comparable v
 valueByIndex idx ls =
     case idx of
         0 ->
@@ -199,7 +199,7 @@ valueByIndex idx ls =
             Debug.crash "Index out of bounds"
 
 
-setByIndex : Int -> Node comparable v -> NodeList comparable v -> NodeList comparable v
+setByIndex : Int -> Node comparable v -> Tree comparable v -> Tree comparable v
 setByIndex idx val ls =
     let
         mask =
@@ -319,6 +319,8 @@ hashPositionWithShift shift hash =
     Bitwise.and 0x1F <| Bitwise.shiftRightLogical hash shift
 
 
+{-| No idea how this works. Stole code from stack overflow.
+-}
 countBits : Int -> Int
 countBits bitmap =
     let
@@ -331,12 +333,12 @@ countBits bitmap =
         (((b2 + (b2 `Bitwise.shiftRightLogical` 4)) `Bitwise.and` 0x0F0F0F0F) * 0x01010101) `Bitwise.shiftRightLogical` 24
 
 
-get : Int -> comparable -> NodeList comparable v -> Maybe v
+get : Int -> comparable -> Tree comparable v -> Maybe v
 get hash key ls =
     get' 0 hash key ls
 
 
-get' : Int -> Int -> comparable -> NodeList comparable v -> Maybe v
+get' : Int -> Int -> comparable -> Tree comparable v -> Maybe v
 get' shift hash key ls =
     let
         pos =
@@ -367,12 +369,12 @@ get' shift hash key ls =
                         Nothing
 
 
-set : Int -> comparable -> v -> NodeList comparable v -> NodeList comparable v
+set : Int -> comparable -> v -> Tree comparable v -> Tree comparable v
 set hash key val ls =
     set' 0 hash key val ls
 
 
-set' : Int -> Int -> comparable -> v -> NodeList comparable v -> NodeList comparable v
+set' : Int -> Int -> comparable -> v -> Tree comparable v -> Tree comparable v
 set' shift hash key val ls =
     let
         pos =
@@ -435,20 +437,18 @@ set' shift hash key val ls =
 
             SubTree nodes ->
                 let
-                    subNodes =
-                        nodes
-                            |> set' newShift hash key val
-                            |> SubTree
+                    sub =
+                        set' newShift hash key val nodes
                 in
-                    setByIndex pos subNodes ls
+                    setByIndex pos (SubTree sub) ls
 
 
-remove : Int -> comparable -> NodeList comparable v -> NodeList comparable v
+remove : Int -> comparable -> Tree comparable v -> Tree comparable v
 remove hash key nl =
     remove' 0 hash key nl
 
 
-remove' : Int -> Int -> comparable -> NodeList comparable v -> NodeList comparable v
+remove' : Int -> Int -> comparable -> Tree comparable v -> Tree comparable v
 remove' shift hash key nl =
     let
         pos =
@@ -480,9 +480,7 @@ remove' shift hash key nl =
             Collision _ vals ->
                 let
                     newCollision =
-                        vals
-                            |> List.filter (\( k, _ ) -> k /= key)
-                            |> List.sortBy fst
+                        List.filter (\( k, _ ) -> k /= key) vals
 
                     newLength =
                         List.length newCollision
@@ -498,12 +496,12 @@ remove' shift hash key nl =
                         setByIndex pos (Collision hash newCollision) nl
 
 
-getFirstValue : NodeList comparable v -> Node comparable v
+getFirstValue : Tree comparable v -> Node comparable v
 getFirstValue ls =
     getFirstValue' 0 ls
 
 
-getFirstValue' : Int -> NodeList comparable v -> Node comparable v
+getFirstValue' : Int -> Tree comparable v -> Node comparable v
 getFirstValue' pos ls =
     if pos > 31 then
         Empty
@@ -520,12 +518,12 @@ getFirstValue' pos ls =
                     node
 
 
-foldl : (comparable -> v -> a -> a) -> a -> NodeList comparable v -> a
+foldl : (comparable -> v -> a -> a) -> a -> Tree comparable v -> a
 foldl folder acc nl =
     foldl' folder acc 0 nl
 
 
-foldl' : (comparable -> v -> a -> a) -> a -> Int -> NodeList comparable v -> a
+foldl' : (comparable -> v -> a -> a) -> a -> Int -> Tree comparable v -> a
 foldl' folder acc pos nl =
     if pos > 31 then
         acc

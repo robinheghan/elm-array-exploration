@@ -48,7 +48,7 @@ lists of comparable types.
 @docs map, foldl, foldr, filter, partition
 -}
 
-import CollectionsNg.NodeList as NodeList exposing (NodeList)
+import CollectionsNg.Hamt as Hamt exposing (Tree)
 import Murmur3
 
 
@@ -58,7 +58,7 @@ that lets you look up a `String` (such as user names) and find the associated
 -}
 type alias Dict comparable v =
     { size : Int
-    , nodes : NodeList comparable v
+    , nodes : Tree comparable v
     }
 
 
@@ -71,7 +71,7 @@ hashFn obj =
 -}
 empty : Dict comparable v
 empty =
-    Dict 0 NodeList.empty
+    Dict 0 Hamt.empty
 
 
 {-| Create a dictionary with one key-value pair.
@@ -109,7 +109,7 @@ dictionary.
 -}
 get : comparable -> Dict comparable v -> Maybe v
 get key dict =
-    NodeList.get (hashFn key) key dict.nodes
+    Hamt.get (hashFn key) key dict.nodes
 
 
 {-| Determine if a key is in a dictionary.
@@ -130,7 +130,7 @@ a collision.
 insert : comparable -> v -> Dict comparable v -> Dict comparable v
 insert key value dict =
     { size = dict.size + 1
-    , nodes = NodeList.set (hashFn key) key value dict.nodes
+    , nodes = Hamt.set (hashFn key) key value dict.nodes
     }
 
 
@@ -152,7 +152,7 @@ no changes are made.
 remove : comparable -> Dict comparable v -> Dict comparable v
 remove key dict =
     { size = dict.size - 1
-    , nodes = NodeList.remove (hashFn key) key dict.nodes
+    , nodes = Hamt.remove (hashFn key) key dict.nodes
     }
 
 
@@ -200,7 +200,7 @@ values dict =
 -}
 map : (comparable -> a -> b) -> Dict comparable a -> Dict comparable b
 map f dict =
-    NodeList.foldl (\key val acc -> insert key (f key val) acc) empty dict.nodes
+    Hamt.foldl (\key val acc -> insert key (f key val) acc) empty dict.nodes
 
 
 {-| Fold over the key-value pairs in a dictionary, in order from lowest
@@ -208,7 +208,7 @@ key to highest key.
 -}
 foldl : (comparable -> v -> b -> b) -> b -> Dict comparable v -> b
 foldl f acc dict =
-    NodeList.foldl f acc dict.nodes
+    Hamt.foldl f acc dict.nodes
 
 
 {-| Fold over the key-value pairs in a dictionary, in order from highest
@@ -216,7 +216,7 @@ key to lowest key.
 -}
 foldr : (comparable -> v -> b -> b) -> b -> Dict comparable v -> b
 foldr f acc t =
-    NodeList.foldl f acc t.nodes
+    Hamt.foldl f acc t.nodes
 
 
 {-| Keep a key-value pair when it satisfies a predicate.

@@ -65,7 +65,7 @@ structure known as Hash Array Mapped Trie (or HAMT for short). This data structu
 core collections in `Clojure` and `Scala`. Our `Array` implementation also uses this data structure,
 and simply uses the value index as a key.
 
-This section describes the code in `src/CollectionsNg/NodeList.elm` from a birds eye view. You
+This section describes the code in `src/CollectionsNg/Hamt.elm` from a birds eye view. You
 should probably read this before reading the source code to understand how it all works.
 
 The key component behind every hash-based data structure, is a hash. A hash is a simple
