@@ -11,6 +11,7 @@ tests =
         , sizeTests
         , getSetTests
         , conversionTests
+        , mergeTests
         ]
 
 
@@ -81,8 +82,8 @@ conversionTests : Test
 conversionTests =
     suite "Conversion"
         [ test "toList"
-            <| assertEqual [ ( "Key2", "Val2" ), ( "Key1", "Val1" ), ( "Key3", "Val3" ) ]
-            <| toList simpleDict
+            <| assertEqual (fromList [ ( "Key2", "Val2" ), ( "Key1", "Val1" ), ( "Key3", "Val3" ) ])
+            <| simpleDict
         , test "keys"
             <| assertEqual [ "Key2", "Key1", "Key3" ]
             <| keys simpleDict
@@ -90,3 +91,46 @@ conversionTests =
             <| assertEqual [ "Val2", "Val1", "Val3" ]
             <| values simpleDict
         ]
+
+
+mergeTests : Test
+mergeTests =
+    let
+        insertBoth key leftVal rightVal dict =
+            insert key (leftVal ++ rightVal) dict
+
+        s1 =
+            singleton "u1" [ 1 ]
+
+        s2 =
+            singleton "u2" [ 2 ]
+
+        s23 =
+            singleton "u2" [ 3 ]
+
+        b1 =
+            List.map (\i -> ( i, [ i ] )) [1..10] |> fromList
+
+        b2 =
+            List.map (\i -> ( i, [ i ] )) [5..15] |> fromList
+
+        bExpected =
+            fromList [ ( 1, [ 1 ] ), ( 2, [ 2 ] ), ( 3, [ 3 ] ), ( 4, [ 4 ] ), ( 5, [ 5, 5 ] ), ( 6, [ 6, 6 ] ), ( 7, [ 7, 7 ] ), ( 8, [ 8, 8 ] ), ( 9, [ 9, 9 ] ), ( 10, [ 10, 10 ] ), ( 11, [ 11 ] ), ( 12, [ 12 ] ), ( 13, [ 13 ] ), ( 14, [ 14 ] ), ( 15, [ 15 ] ) ]
+    in
+        suite "merge Tests"
+            [ test "merge empties"
+                <| assertEqual empty
+                    (merge insert insertBoth insert empty empty empty)
+            , test "merge singletons in order"
+                <| assertEqual (fromList [ ( "u1", [ 1 ] ), ( "u2", [ 2 ] ) ])
+                    (merge insert insertBoth insert s1 s2 empty)
+            , test "merge singletons out of order"
+                <| assertEqual (fromList [ ( "u1", [ 1 ] ), ( "u2", [ 2 ] ) ])
+                    (merge insert insertBoth insert s2 s1 empty)
+            , test "merge with duplicate key"
+                <| assertEqual (fromList [ ( "u2", [ 2, 3 ] ) ])
+                    (merge insert insertBoth insert s2 s23 empty)
+            , test "partially overlapping"
+                <| assertEqual (toList bExpected)
+                    (toList (merge insert insertBoth insert b1 b2 empty))
+            ]

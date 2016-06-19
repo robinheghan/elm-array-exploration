@@ -294,20 +294,30 @@ merge :
     -> result
 merge leftStep bothStep rightStep leftDict rightDict initialResult =
     let
-        stepState rKey rValue ( list, result ) =
+        stepState ( rKey, rValue ) ( list, result ) =
             case list of
                 [] ->
                     ( list, rightStep rKey rValue result )
 
                 ( lKey, lValue ) :: rest ->
                     if lKey < rKey then
-                        ( rest, leftStep lKey lValue result )
+                        stepState ( rKey, rValue ) ( rest, leftStep lKey lValue result )
                     else if lKey > rKey then
                         ( list, rightStep rKey rValue result )
                     else
                         ( rest, bothStep lKey lValue rValue result )
 
+        leftSortedPairs =
+            leftDict
+                |> toList
+                |> List.sortBy fst
+
+        rightSortedPairs =
+            rightDict
+                |> toList
+                |> List.sortBy fst
+
         ( leftovers, intermediateResult ) =
-            foldl stepState ( toList leftDict, initialResult ) rightDict
+            List.foldl stepState ( leftSortedPairs, initialResult ) rightSortedPairs
     in
         List.foldl (\( k, v ) result -> leftStep k v result) intermediateResult leftovers
