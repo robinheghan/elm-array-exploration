@@ -37,7 +37,9 @@ sizeTests =
     suite "Length"
         [ test "simple count" <| assertEqual 3 <| size simpleDict
         , test "insert increases size" <| assertEqual 4 <| size (insert "Key4" "Val4" simpleDict)
+        , test "replace does not increase size" <| assertEqual 3 <| size (insert "Key3" "Val45" simpleDict)
         , test "remove decreases size" <| assertEqual 2 <| size (remove "Key2" simpleDict)
+        , test "remove noop does not decrease size" <| assertEqual 3 <| size (remove "Key50" simpleDict)
         , test "singleton has 1 size" <| assertEqual 1 <| size (singleton "Key1" "Val1")
         ]
 
@@ -131,6 +133,6 @@ mergeTests =
                 <| assertEqual (fromList [ ( "u2", [ 2, 3 ] ) ])
                     (merge insert insertBoth insert s2 s23 empty)
             , test "partially overlapping"
-                <| assertEqual (toList bExpected)
-                    (toList (merge insert insertBoth insert b1 b2 empty))
+                <| assertEqual bExpected
+                    (merge insert insertBoth insert b1 b2 empty)
             ]

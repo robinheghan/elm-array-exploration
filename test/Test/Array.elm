@@ -44,6 +44,7 @@ length' =
         , test "push" <| assertEqual 3 <| length (push 3 (fromList [ 1, 2 ]))
         , test "pop" <| assertEqual 2 <| length (pop (fromList [ 1, 2, 3 ]))
         , test "append" <| assertEqual 5 <| length (append (fromList [ 1, 2 ]) (fromList [ 3, 4, 5 ]))
+        , test "set does not increase" <| assertEqual 3 <| length (set 1 1 (fromList [ 1, 2, 3 ]))
         ]
 
 

@@ -8,6 +8,7 @@ module CollectionsNg.Hamt
         , set
         , remove
         , foldl
+        , size
         )
 
 import Bitwise
@@ -544,3 +545,8 @@ foldl' folder acc pos nl =
                         folder k v acc
                 in
                     foldl' folder (List.foldl colFold acc vals) (pos + 1) nl
+
+
+size : Tree comparable v -> Int
+size nl =
+    foldl (\_ _ acc -> acc + 1) 0 nl

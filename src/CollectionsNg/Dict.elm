@@ -57,9 +57,7 @@ that lets you look up a `String` (such as user names) and find the associated
 `User`.
 -}
 type alias Dict comparable v =
-    { size : Int
-    , nodes : Tree comparable v
-    }
+    Tree comparable v
 
 
 hashFn : a -> Int
@@ -71,7 +69,7 @@ hashFn obj =
 -}
 empty : Dict comparable v
 empty =
-    Dict 0 Hamt.empty
+    Hamt.empty
 
 
 {-| Create a dictionary with one key-value pair.
@@ -87,14 +85,14 @@ singleton key val =
 -}
 isEmpty : Dict comparable v -> Bool
 isEmpty dict =
-    dict.size == 0
+    dict == Hamt.empty
 
 
 {-| Determine the number of key-value pairs in the dictionary.
 -}
 size : Dict comparable v -> Int
-size dict =
-    dict.size
+size =
+    Hamt.size
 
 
 {-| Get the value associated with a key. If the key is not found, return
@@ -109,7 +107,7 @@ dictionary.
 -}
 get : comparable -> Dict comparable v -> Maybe v
 get key dict =
-    Hamt.get (hashFn key) key dict.nodes
+    Hamt.get (hashFn key) key dict
 
 
 {-| Determine if a key is in a dictionary.
@@ -129,9 +127,7 @@ a collision.
 -}
 insert : comparable -> v -> Dict comparable v -> Dict comparable v
 insert key value dict =
-    { size = dict.size + 1
-    , nodes = Hamt.set (hashFn key) key value dict.nodes
-    }
+    Hamt.set (hashFn key) key value dict
 
 
 {-| Update the value of a dictionary for a specific key with a given function.
@@ -151,9 +147,7 @@ no changes are made.
 -}
 remove : comparable -> Dict comparable v -> Dict comparable v
 remove key dict =
-    { size = dict.size - 1
-    , nodes = Hamt.remove (hashFn key) key dict.nodes
-    }
+    Hamt.remove (hashFn key) key dict
 
 
 
@@ -200,7 +194,7 @@ values dict =
 -}
 map : (comparable -> a -> b) -> Dict comparable a -> Dict comparable b
 map f dict =
-    Hamt.foldl (\key val acc -> insert key (f key val) acc) empty dict.nodes
+    Hamt.foldl (\key val acc -> insert key (f key val) acc) empty dict
 
 
 {-| Fold over the key-value pairs in a dictionary, in order from lowest
@@ -208,7 +202,7 @@ key to highest key.
 -}
 foldl : (comparable -> v -> b -> b) -> b -> Dict comparable v -> b
 foldl f acc dict =
-    Hamt.foldl f acc dict.nodes
+    Hamt.foldl f acc dict
 
 
 {-| Fold over the key-value pairs in a dictionary, in order from highest
@@ -216,7 +210,7 @@ key to lowest key.
 -}
 foldr : (comparable -> v -> b -> b) -> b -> Dict comparable v -> b
 foldr f acc t =
-    Hamt.foldl f acc t.nodes
+    Hamt.foldl f acc t
 
 
 {-| Keep a key-value pair when it satisfies a predicate.
