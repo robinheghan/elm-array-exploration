@@ -2,7 +2,7 @@ module Test.Dict exposing (tests)
 
 import Test exposing (..)
 import Expect
-import CollectionsNg.Dict exposing (..)
+import CollectionsNg.Dict as Dict exposing (..)
 
 
 tests : Test
@@ -10,9 +10,10 @@ tests =
     describe "Dict"
         [ empty'
         , size'
-        , manipulation
+        , transform
         , query
         , conversion'
+        , combine
         , merge'
         ]
 
@@ -29,7 +30,10 @@ simpleDict =
 empty' : Test
 empty' =
     describe "empty"
-        [ test "empty dict has 0 size"
+        [ test "all empty dicts are equal"
+            <| \() ->
+                Expect.equal empty (fromList [])
+        , test "empty dict has 0 size"
             <| \() ->
                 size empty
                     |> Expect.equal 0
@@ -70,9 +74,9 @@ size' =
         ]
 
 
-manipulation : Test
-manipulation =
-    describe "Manipulate"
+transform : Test
+transform =
+    describe "Transform"
         [ test "simple set"
             <| \() ->
                 get "Key4" (insert "Key4" "Val4" simpleDict)
@@ -93,6 +97,17 @@ manipulation =
             <| \() ->
                 get "Key2" (update (always Nothing) "Key2" simpleDict)
                     |> Expect.equal Nothing
+        , test "remove nothing"
+            <| \() ->
+                Expect.equal (singleton "k" "v") (remove "kk" (singleton "k" "v"))
+        , test "filter"
+            <| \() ->
+                Expect.equal (singleton "Tom" "cat")
+                    (Dict.filter (\k v -> k == "Tom") animals)
+        , test "partition"
+            <| \() ->
+                Expect.equal ( singleton "Tom" "cat", singleton "Jerry" "mouse" )
+                    (partition (\k v -> k == "Tom") animals)
         ]
 
 
@@ -137,6 +152,25 @@ conversion' =
             <| \() ->
                 values simpleDict
                     |> Expect.equal [ "Val2", "Val1", "Val3" ]
+        ]
+
+
+animals : Dict String String
+animals =
+    fromList [ ( "Tom", "cat" ), ( "Jerry", "mouse" ) ]
+
+
+combine : Test
+combine =
+    describe "combine"
+        [ test "union"
+            <| \() -> Expect.equal animals (union (singleton "Jerry" "mouse") (singleton "Tom" "cat"))
+        , test "union collison"
+            <| \() -> Expect.equal (singleton "Tom" "cat") (union (singleton "Tom" "cat") (singleton "Tom" "mouse"))
+        , test "intersect"
+            <| \() -> Expect.equal (singleton "Tom" "cat") (intersect animals (singleton "Tom" "cat"))
+        , test "diff"
+            <| \() -> Expect.equal (singleton "Jerry" "mouse") (diff animals (singleton "Tom" "cat"))
         ]
 
 

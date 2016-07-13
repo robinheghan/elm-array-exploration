@@ -25,6 +25,18 @@ init' =
             <| \() ->
                 toList (initialize 4 identity)
                     |> Expect.equal [ 0, 1, 2, 3 ]
+        , test "initialize second"
+            <| \() ->
+                toList (initialize 4 (\n -> n * n))
+                    |> Expect.equal [ 0, 1, 4, 9 ]
+        , test "initialize empty"
+            <| \() ->
+                toList (initialize 0 identity)
+                    |> Expect.equal []
+        , test "initialize negative"
+            <| \() ->
+                toList (initialize -2 identity)
+                    |> Expect.equal []
         , test "repeat"
             <| \() ->
                 toList (repeat 3 0)
@@ -35,7 +47,10 @@ init' =
 isEmpty' : Test
 isEmpty' =
     describe "isEmpty"
-        [ test "empty array"
+        [ test "all empty arrays are equal"
+            <| \() ->
+                Expect.equal empty (fromList [])
+        , test "empty array"
             <| \() ->
                 isEmpty empty
                     |> Expect.equal True
