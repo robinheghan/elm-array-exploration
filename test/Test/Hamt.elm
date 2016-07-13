@@ -1,7 +1,8 @@
 module Test.Hamt exposing (tests)
 
+import Test exposing (..)
+import Expect
 import CollectionsNg.Hamt exposing (..)
-import ElmTest exposing (..)
 
 
 hash : Int
@@ -11,7 +12,7 @@ hash =
 
 tests : Test
 tests =
-    suite "Hamt tests"
+    describe "Hamt tests"
         [ hashPath
         , bitCount
         , collisionCheck
@@ -22,26 +23,65 @@ tests =
 
 hashPath : Test
 hashPath =
-    suite "HashPath Tests"
-        [ test "first level" <| assertEqual 31 <| hashPositionWithShift 0 hash
-        , test "second level" <| assertEqual 13 <| hashPositionWithShift 5 hash
-        , test "third level" <| assertEqual 27 <| hashPositionWithShift 10 hash
-        , test "fourth level" <| assertEqual 27 <| hashPositionWithShift 15 hash
-        , test "fifth level" <| assertEqual 23 <| hashPositionWithShift 20 hash
-        , test "sixth level" <| assertEqual 26 <| hashPositionWithShift 25 hash
+    describe "HashPath Tests"
+        [ test "first level"
+            <| \() ->
+                hashPositionWithShift 0 hash
+                    |> Expect.equal 31
+        , test "second level"
+            <| \() ->
+                hashPositionWithShift 5 hash
+                    |> Expect.equal 13
+        , test "third level"
+            <| \() ->
+                hashPositionWithShift 10 hash
+                    |> Expect.equal 27
+        , test "fourth level"
+            <| \() ->
+                hashPositionWithShift 15 hash
+                    |> Expect.equal 27
+        , test "fifth level"
+            <| \() ->
+                hashPositionWithShift 20 hash
+                    |> Expect.equal 23
+        , test "sixth level"
+            <| \() ->
+                hashPositionWithShift 25 hash
+                    |> Expect.equal 26
         ]
 
 
 bitCount : Test
 bitCount =
-    suite "BitCount Tests"
-        [ test "0" <| assertEqual 0 <| countBits 0
-        , test "1" <| assertEqual 1 <| countBits 0x00080000
-        , test "32" <| assertEqual 32 <| countBits 0xFFFFFFFF
-        , test "16" <| assertEqual 16 <| countBits 0xFFFF
-        , test "8" <| assertEqual 8 <| countBits 0xFF
-        , test "4" <| assertEqual 4 <| countBits 0x0F
-        , test "7" <| assertEqual 7 <| countBits 0x0202A822
+    describe "BitCount Tests"
+        [ test "0"
+            <| \() ->
+                countBits 0
+                    |> Expect.equal 0
+        , test "1"
+            <| \() ->
+                countBits 0x00080000
+                    |> Expect.equal 1
+        , test "32"
+            <| \() ->
+                countBits 0xFFFFFFFF
+                    |> Expect.equal 32
+        , test "16"
+            <| \() ->
+                countBits 0xFFFF
+                    |> Expect.equal 16
+        , test "8"
+            <| \() ->
+                countBits 0xFF
+                    |> Expect.equal 8
+        , test "4"
+            <| \() ->
+                countBits 0x0F
+                    |> Expect.equal 4
+        , test "7"
+            <| \() ->
+                countBits 0x0202A822
+                    |> Expect.equal 7
         ]
 
 
@@ -56,16 +96,19 @@ collisionHamt =
 
 collisionCheck : Test
 collisionCheck =
-    suite "CollisionCheck Tests"
+    describe "CollisionCheck Tests"
         [ test "first key"
-            <| assertEqual (Just "Val1")
-            <| get 65 "Key1" collisionHamt
+            <| \() ->
+                get 65 "Key1" collisionHamt
+                    |> Expect.equal (Just "Val1")
         , test "second key"
-            <| assertEqual (Just "Val3")
-            <| get 65 "Key2" collisionHamt
+            <| \() ->
+                get 65 "Key2" collisionHamt
+                    |> Expect.equal (Just "Val3")
         , test "third key"
-            <| assertEqual (Just "Val4")
-            <| get 64 "Key4" collisionHamt
+            <| \() ->
+                get 64 "Key4" collisionHamt
+                    |> Expect.equal (Just "Val4")
         ]
 
 
@@ -78,16 +121,17 @@ foldlHamt =
 
 foldlCheck : Test
 foldlCheck =
-    suite "Foldl tests"
+    describe "Foldl tests"
         [ test "can extract all values"
-            <| assertEqual
-                [ ( "Key6", "Val6" )
-                , ( "Key2", "Val3" )
-                , ( "Key1", "Val1" )
-                , ( "Key5", "Val5" )
-                , ( "Key4", "Val4" )
-                ]
-            <| foldl (\k v acc -> ( k, v ) :: acc) [] foldlHamt
+            <| \() ->
+                foldl (\k v acc -> ( k, v ) :: acc) [] foldlHamt
+                    |> Expect.equal
+                        [ ( "Key6", "Val6" )
+                        , ( "Key2", "Val3" )
+                        , ( "Key1", "Val1" )
+                        , ( "Key5", "Val5" )
+                        , ( "Key4", "Val4" )
+                        ]
         ]
 
 
@@ -118,5 +162,7 @@ equalityHamt' =
 
 equalityCheck : Test
 equalityCheck =
-    suite "Equality"
-        [ test "should be equal" <| assertEqual equalityHamt equalityHamt' ]
+    describe "Equality"
+        [ test "should be equal"
+            <| \() -> Expect.equal equalityHamt equalityHamt'
+        ]

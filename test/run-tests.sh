@@ -2,5 +2,5 @@
 
 set -e
 
-elm-make --yes --output test.js Test.elm
+elm-make --yes --output test.js Tester.elm
 node test.js

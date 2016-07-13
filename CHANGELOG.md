@@ -1,5 +1,9 @@
 # Changelog
 
+## Next
+
+* New and better tests
+
 ## 2.0.0
 
 * `size` function for `Dict` and `Set` returned wrong result when inserting or removing keys which
