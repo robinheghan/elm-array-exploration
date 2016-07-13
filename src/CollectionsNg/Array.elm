@@ -10,7 +10,6 @@ module CollectionsNg.Array
         , toList
         , toIndexedList
         , push
-        , pop
         , get
         , set
         , foldr
@@ -35,7 +34,7 @@ same type.
 @docs isEmpty, length, get
 
 # Manipulate
-@docs set, push, pop, append, slice
+@docs set, push, append, slice
 
 # Lists
 @docs toList, toIndexedList
@@ -151,24 +150,6 @@ push a arr =
     { length = arr.length + 1
     , nodes = Hamt.set arr.length arr.length a arr.nodes
     }
-
-
-{-| Remove the last element from the array.
-
-    pop (fromList [1,2]) == fromList [1]
--}
-pop : Array a -> Array a
-pop arr =
-    if isEmpty arr then
-        arr
-    else
-        let
-            lastIndex =
-                arr.length - 1
-        in
-            { length = lastIndex
-            , nodes = Hamt.remove lastIndex lastIndex arr.nodes
-            }
 
 
 {-| Return Just the element at the index or Nothing if the index is out of range.

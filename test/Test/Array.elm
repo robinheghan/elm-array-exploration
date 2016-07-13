@@ -13,7 +13,6 @@ tests =
         , length'
         , getSet
         , conversion
-        , stack
         , transform
         , runtimeCrash
         ]
@@ -91,7 +90,7 @@ length' =
                     |> Expect.equal 3
         , test "pop"
             <| \() ->
-                length (pop (fromList [ 1, 2, 3 ]))
+                length (slice 0 -1 (fromList [ 1, 2, 3 ]))
                     |> Expect.equal 2
         , test "append"
             <| \() ->
@@ -148,24 +147,6 @@ conversion =
         ]
 
 
-stack : Test
-stack =
-    describe "Stack"
-        [ test "pop empty array returns empty array"
-            <| \() ->
-                pop empty
-                    |> Expect.equal empty
-        , test "pop removes last element"
-            <| \() ->
-                toList (pop (fromList [ 1, 2, 3 ]))
-                    |> Expect.equal [ 1, 2 ]
-        , test "push appends one element"
-            <| \() ->
-                toList (push 3 (fromList [ 1, 2 ]))
-                    |> Expect.equal [ 1, 2, 3 ]
-        ]
-
-
 transform : Test
 transform =
     describe "Transform"
@@ -189,6 +170,10 @@ transform =
             <| \() ->
                 toList (indexedMap (*) (fromList [ 5, 5, 5 ]))
                     |> Expect.equal [ 0, 5, 10 ]
+        , test "push appends one element"
+            <| \() ->
+                toList (push 3 (fromList [ 1, 2 ]))
+                    |> Expect.equal [ 1, 2, 3 ]
         , test "append"
             <| \() ->
                 toList (append (fromList [1..60]) (fromList [61..120]))
