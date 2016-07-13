@@ -132,8 +132,8 @@ insert key value dict =
 
 {-| Update the value of a dictionary for a specific key with a given function.
 -}
-update : (Maybe v -> Maybe v) -> comparable -> Dict comparable v -> Dict comparable v
-update fn key dict =
+update : comparable -> (Maybe v -> Maybe v) -> Dict comparable v -> Dict comparable v
+update key fn dict =
     case fn <| get key dict of
         Just val ->
             insert key val dict

@@ -87,15 +87,15 @@ transform =
                     |> Expect.equal Nothing
         , test "simple update"
             <| \() ->
-                get "Key3" (update (always (Just "Val3Val")) "Key3" simpleDict)
+                get "Key3" (update "Key3" (always (Just "Val3Val")) simpleDict)
                     |> Expect.equal (Just "Val3Val")
         , test "upsert"
             <| \() ->
-                get "Key5" (update (always (Just "Val5")) "Key5" simpleDict)
+                get "Key5" (update "Key5" (always (Just "Val5")) simpleDict)
                     |> Expect.equal (Just "Val5")
         , test "remove by update"
             <| \() ->
-                get "Key2" (update (always Nothing) "Key2" simpleDict)
+                get "Key2" (update "Key2" (always Nothing) simpleDict)
                     |> Expect.equal Nothing
         , test "remove nothing"
             <| \() ->
@@ -146,12 +146,12 @@ conversion' =
                     |> Expect.equal (fromList [ ( "Key2", "Val2" ), ( "Key1", "Val1" ), ( "Key3", "Val3" ) ])
         , test "keys"
             <| \() ->
-                keys simpleDict
-                    |> Expect.equal [ "Key2", "Key1", "Key3" ]
+                List.sort (keys simpleDict)
+                    |> Expect.equal [ "Key1", "Key2", "Key3" ]
         , test "values"
             <| \() ->
-                values simpleDict
-                    |> Expect.equal [ "Val2", "Val1", "Val3" ]
+                List.sort (values simpleDict)
+                    |> Expect.equal [ "Val1", "Val2", "Val3" ]
         ]
 
 
