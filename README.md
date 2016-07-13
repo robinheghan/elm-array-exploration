@@ -11,6 +11,8 @@ The performance characteristics differ. Until a benchmark suite has been set up,
 how they differ or by how much. My guess, however, is that this implementation on average uses more memory
 and has slower insertion and removal of elements, but is faster to read from.
 
+A presentation of how this library works can be seen [here](https://youtu.be/qmQo9jtXMSo?t=2603).
+
 ## Code shared
 
 This library makes liberal use of code from `elm-core`. The `Set` implementation is more
@@ -18,8 +20,6 @@ or less the exact same code, the same goes for a lot of documentation comments.
 
 ## Todo
 
-* Make sure the tests covers most situations, that the same conventions are used
-throughout the project, and investigate use of `elm-check`.
 * Setup a benchmark suite.
 * Optimize (look at the bottom for optimization ideas).
 

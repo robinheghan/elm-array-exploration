@@ -1,8 +1,9 @@
 # Changelog
 
-## Next
+## 3.0.0
 
-* New and better tests
+* New and better unit tests
+* Fixed API incompatability problems with Dict and Array. We're now 100% API compatible.
 
 ## 2.0.0
 
