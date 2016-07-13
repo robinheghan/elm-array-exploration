@@ -7,12 +7,13 @@ import CollectionsNg.Dict exposing (..)
 
 tests : Test
 tests =
-    describe "Dict tests"
-        [ emptyTests
-        , sizeTests
-        , getSetTests
-        , conversionTests
-        , mergeTests
+    describe "Dict"
+        [ empty'
+        , size'
+        , manipulation
+        , query
+        , conversion'
+        , merge'
         ]
 
 
@@ -25,23 +26,23 @@ simpleDict =
         ]
 
 
-emptyTests : Test
-emptyTests =
-    describe "Empty"
-        [ test "empty has 0 size"
+empty' : Test
+empty' =
+    describe "empty"
+        [ test "empty dict has 0 size"
             <| \() ->
                 size empty
                     |> Expect.equal 0
-        , test "0 size is empty"
+        , test "a dict with 0 size is empty"
             <| \() ->
                 isEmpty empty
                     |> Expect.equal True
         ]
 
 
-sizeTests : Test
-sizeTests =
-    describe "Length"
+size' : Test
+size' =
+    describe "size"
         [ test "simple count"
             <| \() ->
                 size simpleDict
@@ -69,22 +70,10 @@ sizeTests =
         ]
 
 
-getSetTests : Test
-getSetTests =
-    describe "Get set"
-        [ test "get from singleton"
-            <| \() ->
-                get "Key1" (singleton "Key1" "Val1")
-                    |> Expect.equal (Just "Val1")
-        , test "simple get"
-            <| \() ->
-                get "Key2" simpleDict
-                    |> Expect.equal (Just "Val2")
-        , test "nonexistant get"
-            <| \() ->
-                get "Key4" simpleDict
-                    |> Expect.equal Nothing
-        , test "simple set"
+manipulation : Test
+manipulation =
+    describe "Manipulate"
+        [ test "simple set"
             <| \() ->
                 get "Key4" (insert "Key4" "Val4" simpleDict)
                     |> Expect.equal (Just "Val4")
@@ -104,6 +93,24 @@ getSetTests =
             <| \() ->
                 get "Key2" (update (always Nothing) "Key2" simpleDict)
                     |> Expect.equal Nothing
+        ]
+
+
+query : Test
+query =
+    describe "Query"
+        [ test "get from singleton"
+            <| \() ->
+                get "Key1" (singleton "Key1" "Val1")
+                    |> Expect.equal (Just "Val1")
+        , test "simple get"
+            <| \() ->
+                get "Key2" simpleDict
+                    |> Expect.equal (Just "Val2")
+        , test "nonexistant get"
+            <| \() ->
+                get "Key4" simpleDict
+                    |> Expect.equal Nothing
         , test "member exists"
             <| \() ->
                 member "Key2" simpleDict
@@ -115,8 +122,8 @@ getSetTests =
         ]
 
 
-conversionTests : Test
-conversionTests =
+conversion' : Test
+conversion' =
     describe "Conversion"
         [ test "toList"
             <| \() ->
@@ -133,8 +140,8 @@ conversionTests =
         ]
 
 
-mergeTests : Test
-mergeTests =
+merge' : Test
+merge' =
     let
         insertBoth key leftVal rightVal dict =
             insert key (leftVal ++ rightVal) dict
@@ -155,10 +162,26 @@ mergeTests =
             fromList <| List.map (\i -> ( i, [ i ] )) [5..15]
 
         bExpected =
-            fromList [ ( 1, [ 1 ] ), ( 2, [ 2 ] ), ( 3, [ 3 ] ), ( 4, [ 4 ] ), ( 5, [ 5, 5 ] ), ( 6, [ 6, 6 ] ), ( 7, [ 7, 7 ] ), ( 8, [ 8, 8 ] ), ( 9, [ 9, 9 ] ), ( 10, [ 10, 10 ] ), ( 11, [ 11 ] ), ( 12, [ 12 ] ), ( 13, [ 13 ] ), ( 14, [ 14 ] ), ( 15, [ 15 ] ) ]
+            fromList
+                [ ( 1, [ 1 ] )
+                , ( 2, [ 2 ] )
+                , ( 3, [ 3 ] )
+                , ( 4, [ 4 ] )
+                , ( 5, [ 5, 5 ] )
+                , ( 6, [ 6, 6 ] )
+                , ( 7, [ 7, 7 ] )
+                , ( 8, [ 8, 8 ] )
+                , ( 9, [ 9, 9 ] )
+                , ( 10, [ 10, 10 ] )
+                , ( 11, [ 11 ] )
+                , ( 12, [ 12 ] )
+                , ( 13, [ 13 ] )
+                , ( 14, [ 14 ] )
+                , ( 15, [ 15 ] )
+                ]
     in
-        describe "merge Tests"
-            [ test "merge empties"
+        describe "merge"
+            [ test "merge of empty dicts returns empty dict"
                 <| \() ->
                     merge insert insertBoth insert empty empty empty
                         |> Expect.equal empty

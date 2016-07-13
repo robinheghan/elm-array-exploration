@@ -7,7 +7,7 @@ import CollectionsNg.Array exposing (..)
 
 tests : Test
 tests =
-    describe "Array tests"
+    describe "Array"
         [ init'
         , isEmpty'
         , length'
@@ -20,7 +20,7 @@ tests =
 
 init' : Test
 init' =
-    describe "Initialization Tests"
+    describe "Initialization"
         [ test "initialize"
             <| \() ->
                 toList (initialize 4 identity)
@@ -34,7 +34,7 @@ init' =
 
 isEmpty' : Test
 isEmpty' =
-    describe "isEmpty Tests"
+    describe "isEmpty"
         [ test "empty array"
             <| \() ->
                 isEmpty empty
@@ -52,7 +52,7 @@ isEmpty' =
 
 length' : Test
 length' =
-    describe "Length tests"
+    describe "Length"
         [ test "empty array"
             <| \() ->
                 length empty
@@ -90,14 +90,14 @@ length' =
 
 getSet : Test
 getSet =
-    describe "Testing simple get and set functionality"
+    describe "Get and set"
         [ test "can retrieve element"
             <| \() ->
                 get 1 (fromList [ 1, 2, 3 ])
                     |> Expect.equal (Just 2)
         , test "can retrieve element in large array"
             <| \() ->
-                get 45 (fromList [0..60])
+                get 45 (fromList [0..65])
                     |> Expect.equal (Just 45)
         , test "out of bounds retrieval returns nothing"
             <| \() ->
@@ -116,7 +116,7 @@ getSet =
 
 conversion : Test
 conversion =
-    describe "Conversion tests"
+    describe "Conversion"
         [ test "empty array"
             <| \() ->
                 toList (fromList [])
@@ -134,7 +134,7 @@ conversion =
 
 stack : Test
 stack =
-    describe "Stack tests"
+    describe "Stack"
         [ test "pop empty array returns empty array"
             <| \() ->
                 pop empty
@@ -152,7 +152,7 @@ stack =
 
 transform : Test
 transform =
-    describe "Transform tests"
+    describe "Transform"
         [ test "foldl"
             <| \() ->
                 foldl (::) [] (fromList [ 1, 2, 3 ])
@@ -167,7 +167,7 @@ transform =
                     |> Expect.equal [ 2, 4, 6 ]
         , test "map"
             <| \() ->
-                toList (map (\a -> a + 1) (fromList [ 1, 2, 3 ]))
+                toList (map ((+) 1) (fromList [ 1, 2, 3 ]))
                     |> Expect.equal [ 2, 3, 4 ]
         , test "indexedMap"
             <| \() ->

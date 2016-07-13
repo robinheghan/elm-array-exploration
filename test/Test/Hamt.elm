@@ -5,25 +5,25 @@ import Expect
 import CollectionsNg.Hamt exposing (..)
 
 
+tests : Test
+tests =
+    describe "Hamt"
+        [ hashPath
+        , countBits'
+        , collisions
+        , foldl'
+        , equality
+        ]
+
+
 hash : Int
 hash =
     0x357DEDBF
 
 
-tests : Test
-tests =
-    describe "Hamt tests"
-        [ hashPath
-        , bitCount
-        , collisionCheck
-        , foldlCheck
-        , equalityCheck
-        ]
-
-
 hashPath : Test
 hashPath =
-    describe "HashPath Tests"
+    describe "Hash path"
         [ test "first level"
             <| \() ->
                 hashPositionWithShift 0 hash
@@ -51,9 +51,9 @@ hashPath =
         ]
 
 
-bitCount : Test
-bitCount =
-    describe "BitCount Tests"
+countBits' : Test
+countBits' =
+    describe "countBits"
         [ test "0"
             <| \() ->
                 countBits 0
@@ -94,9 +94,9 @@ collisionHamt =
         |> set 64 "Key4" "Val4"
 
 
-collisionCheck : Test
-collisionCheck =
-    describe "CollisionCheck Tests"
+collisions : Test
+collisions =
+    describe "Collisions"
         [ test "first key"
             <| \() ->
                 get 65 "Key1" collisionHamt
@@ -119,9 +119,9 @@ foldlHamt =
         |> set 31 "Key6" "Val6"
 
 
-foldlCheck : Test
-foldlCheck =
-    describe "Foldl tests"
+foldl' : Test
+foldl' =
+    describe "foldl"
         [ test "can extract all values"
             <| \() ->
                 foldl (\k v acc -> ( k, v ) :: acc) [] foldlHamt
@@ -160,8 +160,8 @@ equalityHamt' =
         |> set 34 "ToCollide1" 4
 
 
-equalityCheck : Test
-equalityCheck =
+equality : Test
+equality =
     describe "Equality"
         [ test "should be equal"
             <| \() -> Expect.equal equalityHamt equalityHamt'
