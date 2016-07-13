@@ -15,6 +15,7 @@ tests =
         , conversion
         , stack
         , transform
+        , runtimeCrash
         ]
 
 
@@ -208,4 +209,40 @@ transform =
             <| \() ->
                 toList (slice 6 -2 (fromList [1..8]))
                     |> Expect.equal []
+        ]
+
+
+runtimeCrash : Test
+runtimeCrash =
+    describe "Runtime crashes in core"
+        [ test "magic slice"
+            <| \() ->
+                let
+                    n =
+                        10
+                in
+                    initialize (4 * n) identity
+                        |> slice n (4 * n)
+                        |> slice n (3 * n)
+                        |> slice n (2 * n)
+                        |> slice n n
+                        |> \a -> Expect.equal a a
+        , test "magic slice 2"
+            <| \() ->
+                let
+                    ary =
+                        fromList [0..32]
+
+                    res =
+                        append (slice 1 32 ary) (slice (32 + 1) -1 ary)
+                in
+                    Expect.equal res res
+        , test "magic append"
+            <| \() ->
+                let
+                    res =
+                        append (initialize 1 (always 1))
+                            (initialize (32 ^ 2 - 1 * 32 + 1) (\i -> i))
+                in
+                    Expect.equal res res
         ]
