@@ -129,7 +129,7 @@ fromList ls =
 -}
 toList : Array a -> List a
 toList arr =
-    foldr (\acc n -> n :: acc) [] arr
+    foldr (\n acc -> n :: acc) [] arr
 
 
 {-| Create an indexed list from an array. Each element of the array will be
@@ -203,19 +203,19 @@ set idx val arr =
 
     foldr (+) 0 (repeat 3 5) == 15
 -}
-foldr : (b -> a -> b) -> b -> Array a -> b
+foldr : (a -> b -> b) -> b -> Array a -> b
 foldr folder init arr =
     foldr' folder init (arr.length - 1) arr
 
 
-foldr' : (b -> a -> b) -> b -> Int -> Array a -> b
+foldr' : (a -> b -> b) -> b -> Int -> Array a -> b
 foldr' folder acc idx arr =
     if idx == -1 then
         acc
     else
         case Hamt.get idx idx arr.nodes of
             Just x ->
-                foldr' folder (folder acc x) (idx - 1) arr
+                foldr' folder (folder x acc) (idx - 1) arr
 
             Nothing ->
                 Debug.crash "This is a bug. Please report this."
@@ -327,7 +327,7 @@ slice from to arr =
         if isEmpty arr || correctFrom > correctTo then
             empty
         else
-            slice' correctFrom (correctTo + 1) empty arr
+            slice' correctFrom correctTo empty arr
 
 
 slice' : Int -> Int -> Array a -> Array a -> Array a
@@ -348,7 +348,7 @@ translateIndex idx arr =
     let
         posIndex =
             if idx < 0 then
-                arr.length - 1 + idx
+                arr.length + idx
             else
                 idx
     in

@@ -174,7 +174,7 @@ transform =
                     |> Expect.equal [ 3, 2, 1 ]
         , test "foldr"
             <| \() ->
-                foldr (\acc n -> n :: acc) [] (fromList [ 1, 2, 3 ])
+                foldr (\n acc -> n :: acc) [] (fromList [ 1, 2, 3 ])
                     |> Expect.equal [ 1, 2, 3 ]
         , test "filter"
             <| \() ->
@@ -195,11 +195,11 @@ transform =
         , test "slice"
             <| \() ->
                 toList (slice 2 5 (fromList [1..8]))
-                    |> Expect.equal [3..6]
+                    |> Expect.equal [3..5]
         , test "negative slice"
             <| \() ->
                 toList (slice -5 -2 (fromList [1..8]))
-                    |> Expect.equal [3..6]
+                    |> Expect.equal [4..6]
         , test "combined slice"
             <| \() ->
                 toList (slice 2 -2 (fromList [1..8]))
