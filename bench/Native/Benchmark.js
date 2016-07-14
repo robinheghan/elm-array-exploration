@@ -30,7 +30,7 @@ var _user$project$Native_Benchmark = (function () {
                 console.log(String(event.target));
             }).on('complete', function () {
                 console.log('Done with ' + this.name + ' suite.');
-            }).run({async: true});
+            }).run();
         }
 
         return program;
