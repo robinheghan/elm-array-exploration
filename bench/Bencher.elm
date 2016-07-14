@@ -10,6 +10,6 @@ main =
     Html.App.beginnerProgram
         { model = ()
         , update = \_ _ -> ()
-        , view = \() -> Html.text "Check the console for results (can take a while)!"
+        , view = \() -> Html.text "Check the console for output."
         }
         |> Benchmark.run [ Benchmark.suite "Test" [ Benchmark.bench "Test1" (\() -> "Test" ++ "Best") ] ]
