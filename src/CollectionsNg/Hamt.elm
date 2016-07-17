@@ -147,9 +147,10 @@ set' shift hash key val ls =
                     else
                         let
                             element =
-                                [ ( key, val ), ( xKey, xVal ) ]
-                                    |> List.sortBy fst
-                                    |> Collision hash
+                                if key < xKey then
+                                    Collision hash [ ( key, val ), ( xKey, xVal ) ]
+                                else
+                                    Collision hash [ ( xKey, xVal ), ( key, val ) ]
                         in
                             setByIndex pos element ls
                 else
