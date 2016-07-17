@@ -156,8 +156,7 @@ set' shift hash key val ls =
                 else
                     let
                         subNodes =
-                            empty
-                                |> set' newShift xHash xKey xVal
+                            set' newShift xHash xKey xVal empty
                                 |> set' newShift hash key val
                                 |> SubTree
                     in
@@ -169,7 +168,7 @@ set' shift hash key val ls =
                         newNodes =
                             nodes
                                 |> List.filter (\( k, _ ) -> k /= key)
-                                |> ((::) ( key, val ))
+                                |> ((++) [( key, val )])
                                 |> List.sortBy fst
                     in
                         setByIndex pos (Collision hash newNodes) ls
@@ -179,8 +178,7 @@ set' shift hash key val ls =
                             hashPositionWithShift newShift xHash
 
                         subNodes =
-                            empty
-                                |> setByIndex collisionPos currValue
+                            setByIndex collisionPos currValue empty
                                 |> set' newShift hash key val
                                 |> SubTree
                     in
