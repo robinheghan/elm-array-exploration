@@ -116,7 +116,17 @@ Notice that `repeat 3 x` is the same as `initialize 3 (always x)`.
 -}
 repeat : Int -> a -> Array a
 repeat n e =
-    initialize n (always e)
+    let
+        repeat' idx acc =
+            if n <= idx then
+                acc
+            else
+                repeat'
+                    (idx + 1)
+                    { empty | nodes = Hamt.set idx idx (e) acc.nodes }
+
+    in
+        repeat' 0 { empty | length = n }
 
 
 {-| Create an array from a list.
