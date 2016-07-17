@@ -28,6 +28,11 @@ largeArraySize =
     10000
 
 
+repeat : Int -> () -> Input
+repeat n =
+    \() -> Array.repeat 5 n
+
+
 build : Int -> () -> Input
 build n =
     \() -> List.foldl (\i acc -> Array.push i acc) Array.empty [1..n]
@@ -71,6 +76,8 @@ createSuite n =
     in
         [ bench "Build"
             <| build n
+        , bench "Repeat"
+            <| repeat n
         , bench "Set"
             <| set sampleArray
         , bench "Push"
