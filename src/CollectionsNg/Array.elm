@@ -97,9 +97,12 @@ initialize stop f =
             if stop <= idx then
                 acc
             else
-                initialize' (idx + 1) (push (f idx) acc)
+                initialize'
+                    (idx + 1)
+                    { empty | nodes = Hamt.set idx idx (f idx) acc.nodes }
+
     in
-        initialize' 0 empty
+        initialize' 0 { empty | length = stop }
 
 
 
