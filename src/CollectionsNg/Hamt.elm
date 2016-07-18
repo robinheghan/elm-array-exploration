@@ -2,8 +2,6 @@ module CollectionsNg.Hamt
     exposing
         ( Tree
         , empty
-        , hashPositionWithShift
-        , countBits
         , get
         , set
         , remove
@@ -39,8 +37,8 @@ empty =
     }
 
 
-setByIndex : Int -> Node comparable v -> Tree comparable v -> Tree comparable v
-setByIndex idx val ls =
+setByIndex : Int -> Int -> Node comparable v -> Tree comparable v -> Tree comparable v
+setByIndex idx blobPos val ls =
     let
         mask =
             0x01 `Bitwise.shiftLeft` idx
@@ -50,9 +48,6 @@ setByIndex idx val ls =
 
         shouldReplace =
             ls.positionMap `Bitwise.and` mask == mask
-
-        blobPos =
-            blobPosition idx ls.positionMap
 
         newBlobs =
             if shouldReplace then
@@ -65,8 +60,8 @@ setByIndex idx val ls =
         }
 
 
-valueByIndex : Int -> Tree comparable v -> Maybe (Node comparable v)
-valueByIndex idx ls =
+valueByIndex : Int -> Int -> Tree comparable v -> Maybe (Node comparable v)
+valueByIndex idx blobPos ls =
     let
         mask =
             0x01 `Bitwise.shiftLeft` idx
@@ -75,13 +70,13 @@ valueByIndex idx ls =
             ls.positionMap `Bitwise.and` mask == mask
     in
         if hasValue then
-            Array.get (blobPosition idx ls.positionMap) ls.blobs
+            Array.get blobPos ls.blobs
         else
             Nothing
 
 
-removeByIndex : Int -> Tree comparable v -> Tree comparable v
-removeByIndex idx ls =
+removeByIndex : Int -> Int -> Tree comparable v -> Tree comparable v
+removeByIndex idx blobPos ls =
     let
         mask =
             0x01 `Bitwise.shiftLeft` idx
@@ -90,7 +85,7 @@ removeByIndex idx ls =
             ls.positionMap `Bitwise.xor` mask
     in
         { positionMap = alteredBitmap
-        , blobs = removeAt (blobPosition idx ls.positionMap) ls.blobs
+        , blobs = removeAt blobPos ls.blobs
         }
 
 
@@ -152,8 +147,11 @@ get' shift hash key ls =
     let
         pos =
             hashPositionWithShift shift hash
+
+        blobPos =
+            blobPosition pos ls.positionMap
     in
-        case valueByIndex pos ls of
+        case valueByIndex pos blobPos ls of
             Nothing ->
                 Nothing
 
@@ -188,19 +186,22 @@ set' shift hash key val ls =
         pos =
             hashPositionWithShift shift hash
 
+        blobPos =
+            blobPosition pos ls.positionMap
+
         newShift =
             shift + 5
     in
-        case valueByIndex pos ls of
+        case valueByIndex pos blobPos ls of
             Nothing ->
-                setByIndex pos (Element hash key val) ls
+                setByIndex pos blobPos (Element hash key val) ls
 
             Just currValue ->
                 case currValue of
                     Element xHash xKey xVal ->
                         if xHash == hash then
                             if xKey == key then
-                                setByIndex pos (Element hash key val) ls
+                                setByIndex pos blobPos (Element hash key val) ls
                             else
                                 let
                                     element =
@@ -209,7 +210,7 @@ set' shift hash key val ls =
                                         else
                                             Collision hash [ ( xKey, xVal ), ( key, val ) ]
                                 in
-                                    setByIndex pos element ls
+                                    setByIndex pos blobPos element ls
                         else
                             let
                                 subNodes =
@@ -217,7 +218,7 @@ set' shift hash key val ls =
                                         |> set' newShift hash key val
                                         |> SubTree
                             in
-                                setByIndex pos subNodes ls
+                                setByIndex pos blobPos subNodes ls
 
                     Collision xHash nodes ->
                         if xHash == hash then
@@ -228,25 +229,28 @@ set' shift hash key val ls =
                                         |> ((::) ( key, val ))
                                         |> List.sortBy fst
                             in
-                                setByIndex pos (Collision hash newNodes) ls
+                                setByIndex pos blobPos (Collision hash newNodes) ls
                         else
                             let
                                 collisionPos =
                                     hashPositionWithShift newShift xHash
 
+                                collisionBlobPos =
+                                    blobPosition collisionPos empty.positionMap
+
                                 subNodes =
-                                    setByIndex collisionPos currValue empty
+                                    setByIndex collisionPos collisionBlobPos currValue empty
                                         |> set' newShift hash key val
                                         |> SubTree
                             in
-                                setByIndex pos subNodes ls
+                                setByIndex pos blobPos subNodes ls
 
                     SubTree nodes ->
                         let
                             sub =
                                 set' newShift hash key val nodes
                         in
-                            setByIndex pos (SubTree sub) ls
+                            setByIndex pos blobPos (SubTree sub) ls
 
 
 remove : Int -> comparable -> Tree comparable v -> Tree comparable v
@@ -259,8 +263,11 @@ remove' shift hash key nl =
     let
         pos =
             hashPositionWithShift shift hash
+
+        blobPos =
+            blobPosition pos nl.positionMap
     in
-        case valueByIndex pos nl of
+        case valueByIndex pos blobPos nl of
             Nothing ->
                 nl
 
@@ -268,7 +275,7 @@ remove' shift hash key nl =
                 case node of
                     Element _ eKey value ->
                         if eKey == key then
-                            removeByIndex pos nl
+                            removeByIndex pos blobPos nl
                         else
                             nl
 
@@ -280,12 +287,12 @@ remove' shift hash key nl =
                             if Array.length newSub.blobs == 1 then
                                 case Array.get 0 newSub.blobs of
                                     Just v ->
-                                        setByIndex pos v nl
+                                        setByIndex pos blobPos v nl
 
                                     Nothing ->
                                         Debug.crash "Cannot happen."
                             else
-                                setByIndex pos (SubTree newSub) nl
+                                setByIndex pos blobPos (SubTree newSub) nl
 
                     Collision _ vals ->
                         let
@@ -295,12 +302,12 @@ remove' shift hash key nl =
                             if List.length newCollision == 1 then
                                 case List.head newCollision of
                                     Just ( k, v ) ->
-                                        setByIndex pos (Element hash k v) nl
+                                        setByIndex pos blobPos (Element hash k v) nl
 
                                     Nothing ->
                                         Debug.crash "This should not happen."
                             else
-                                setByIndex pos (Collision hash newCollision) nl
+                                setByIndex pos blobPos (Collision hash newCollision) nl
 
 
 foldl : (comparable -> v -> a -> a) -> a -> Tree comparable v -> a

@@ -8,9 +8,7 @@ import CollectionsNg.Hamt exposing (..)
 tests : Test
 tests =
     describe "Hamt"
-        [ hashPath
-        , countBits'
-        , collisions
+        [ collisions
         , foldl'
         , equality
         ]
@@ -19,70 +17,6 @@ tests =
 hash : Int
 hash =
     0x357DEDBF
-
-
-hashPath : Test
-hashPath =
-    describe "Hash path"
-        [ test "first level"
-            <| \() ->
-                hashPositionWithShift 0 hash
-                    |> Expect.equal 31
-        , test "second level"
-            <| \() ->
-                hashPositionWithShift 5 hash
-                    |> Expect.equal 13
-        , test "third level"
-            <| \() ->
-                hashPositionWithShift 10 hash
-                    |> Expect.equal 27
-        , test "fourth level"
-            <| \() ->
-                hashPositionWithShift 15 hash
-                    |> Expect.equal 27
-        , test "fifth level"
-            <| \() ->
-                hashPositionWithShift 20 hash
-                    |> Expect.equal 23
-        , test "sixth level"
-            <| \() ->
-                hashPositionWithShift 25 hash
-                    |> Expect.equal 26
-        ]
-
-
-countBits' : Test
-countBits' =
-    describe "countBits"
-        [ test "0"
-            <| \() ->
-                countBits 0
-                    |> Expect.equal 0
-        , test "1"
-            <| \() ->
-                countBits 0x00080000
-                    |> Expect.equal 1
-        , test "32"
-            <| \() ->
-                countBits 0xFFFFFFFF
-                    |> Expect.equal 32
-        , test "16"
-            <| \() ->
-                countBits 0xFFFF
-                    |> Expect.equal 16
-        , test "8"
-            <| \() ->
-                countBits 0xFF
-                    |> Expect.equal 8
-        , test "4"
-            <| \() ->
-                countBits 0x0F
-                    |> Expect.equal 4
-        , test "7"
-            <| \() ->
-                countBits 0x0202A822
-                    |> Expect.equal 7
-        ]
 
 
 collisionHamt : Tree String String
