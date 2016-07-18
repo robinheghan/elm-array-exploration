@@ -8,6 +8,6 @@ echo "var Benchmark = require('benchmark');\n" > main.js
 cat bench.js >> main.js
 
 
-FILENAME="test-$(date).png"
+FILENAME="bench-$(date).js"
 node main.js >> $FILENAME
 
