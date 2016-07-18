@@ -30,7 +30,7 @@ largeArraySize =
 
 repeat : Int -> () -> Input
 repeat n =
-    \() -> Array.repeat 5 n
+    \() -> Array.repeat n 5
 
 
 build : Int -> () -> Input
