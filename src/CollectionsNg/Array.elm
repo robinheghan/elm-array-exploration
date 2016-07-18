@@ -92,15 +92,19 @@ the element at index `i` initialized to the result of `(f i)`.
 -}
 initialize : Int -> (Int -> a) -> Array a
 initialize stop f =
-    initialize' stop 0 f empty
+    let
+        initialize' idx acc =
+            if stop <= idx then
+                acc
+            else
+                initialize'
+                    (idx + 1)
+                    { empty | nodes = Hamt.set idx idx (f idx) acc.nodes }
+
+    in
+        initialize' 0 { empty | length = stop }
 
 
-initialize' : Int -> Int -> (Int -> a) -> Array a -> Array a
-initialize' stop idx f acc =
-    if stop <= idx then
-        acc
-    else
-        initialize' stop (idx + 1) f <| push (f idx) acc
 
 
 {-| Creates an array with a given length, filled with a default element.
@@ -112,7 +116,17 @@ Notice that `repeat 3 x` is the same as `initialize 3 (always x)`.
 -}
 repeat : Int -> a -> Array a
 repeat n e =
-    initialize n (always e)
+    let
+        repeat' idx acc =
+            if n <= idx then
+                acc
+            else
+                repeat'
+                    (idx + 1)
+                    { empty | nodes = Hamt.set idx idx (e) acc.nodes }
+
+    in
+        repeat' 0 { empty | length = n }
 
 
 {-| Create an array from a list.

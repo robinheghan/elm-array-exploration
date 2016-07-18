@@ -11,44 +11,16 @@ module CollectionsNg.Hamt
         , size
         )
 
+import Array
 import Bitwise
 import List.Extra exposing (find)
 
+type alias Blobs comparable v =
+    Array.Array (Node comparable v)
 
 type alias Tree comparable v =
     { positionMap : Int
-    , i0 : Node comparable v
-    , i1 : Node comparable v
-    , i2 : Node comparable v
-    , i3 : Node comparable v
-    , i4 : Node comparable v
-    , i5 : Node comparable v
-    , i6 : Node comparable v
-    , i7 : Node comparable v
-    , i8 : Node comparable v
-    , i9 : Node comparable v
-    , i10 : Node comparable v
-    , i11 : Node comparable v
-    , i12 : Node comparable v
-    , i13 : Node comparable v
-    , i14 : Node comparable v
-    , i15 : Node comparable v
-    , i16 : Node comparable v
-    , i17 : Node comparable v
-    , i18 : Node comparable v
-    , i19 : Node comparable v
-    , i20 : Node comparable v
-    , i21 : Node comparable v
-    , i22 : Node comparable v
-    , i23 : Node comparable v
-    , i24 : Node comparable v
-    , i25 : Node comparable v
-    , i26 : Node comparable v
-    , i27 : Node comparable v
-    , i28 : Node comparable v
-    , i29 : Node comparable v
-    , i30 : Node comparable v
-    , i31 : Node comparable v
+    , blobs : Blobs comparable v
     }
 
 
@@ -62,141 +34,16 @@ type Node comparable v
 empty : Tree comparable v
 empty =
     { positionMap = 0
-    , i0 = Empty
-    , i1 = Empty
-    , i2 = Empty
-    , i3 = Empty
-    , i4 = Empty
-    , i5 = Empty
-    , i6 = Empty
-    , i7 = Empty
-    , i8 = Empty
-    , i9 = Empty
-    , i10 = Empty
-    , i11 = Empty
-    , i12 = Empty
-    , i13 = Empty
-    , i14 = Empty
-    , i15 = Empty
-    , i16 = Empty
-    , i17 = Empty
-    , i18 = Empty
-    , i19 = Empty
-    , i20 = Empty
-    , i21 = Empty
-    , i22 = Empty
-    , i23 = Empty
-    , i24 = Empty
-    , i25 = Empty
-    , i26 = Empty
-    , i27 = Empty
-    , i28 = Empty
-    , i29 = Empty
-    , i30 = Empty
-    , i31 = Empty
+    , blobs = Array.repeat 32 Empty
     }
 
 
 valueByIndex : Int -> Tree comparable v -> Node comparable v
 valueByIndex idx ls =
-    case idx of
-        0 ->
-            ls.i0
-
-        1 ->
-            ls.i1
-
-        2 ->
-            ls.i2
-
-        3 ->
-            ls.i3
-
-        4 ->
-            ls.i4
-
-        5 ->
-            ls.i5
-
-        6 ->
-            ls.i6
-
-        7 ->
-            ls.i7
-
-        8 ->
-            ls.i8
-
-        9 ->
-            ls.i9
-
-        10 ->
-            ls.i10
-
-        11 ->
-            ls.i11
-
-        12 ->
-            ls.i12
-
-        13 ->
-            ls.i13
-
-        14 ->
-            ls.i14
-
-        15 ->
-            ls.i15
-
-        16 ->
-            ls.i16
-
-        17 ->
-            ls.i17
-
-        18 ->
-            ls.i18
-
-        19 ->
-            ls.i19
-
-        20 ->
-            ls.i20
-
-        21 ->
-            ls.i21
-
-        22 ->
-            ls.i22
-
-        23 ->
-            ls.i23
-
-        24 ->
-            ls.i24
-
-        25 ->
-            ls.i25
-
-        26 ->
-            ls.i26
-
-        27 ->
-            ls.i27
-
-        28 ->
-            ls.i28
-
-        29 ->
-            ls.i29
-
-        30 ->
-            ls.i30
-
-        31 ->
-            ls.i31
-
-        _ ->
+    case Array.get idx ls.blobs of
+        Just node ->
+            node
+        Nothing ->
             Debug.crash "Index out of bounds"
 
 
@@ -214,105 +61,7 @@ setByIndex idx val ls =
                 _ ->
                     ls.positionMap `Bitwise.or` mask
     in
-        case idx of
-            0 ->
-                { ls | positionMap = alteredBitmap, i0 = val }
-
-            1 ->
-                { ls | positionMap = alteredBitmap, i1 = val }
-
-            2 ->
-                { ls | positionMap = alteredBitmap, i2 = val }
-
-            3 ->
-                { ls | positionMap = alteredBitmap, i3 = val }
-
-            4 ->
-                { ls | positionMap = alteredBitmap, i4 = val }
-
-            5 ->
-                { ls | positionMap = alteredBitmap, i5 = val }
-
-            6 ->
-                { ls | positionMap = alteredBitmap, i6 = val }
-
-            7 ->
-                { ls | positionMap = alteredBitmap, i7 = val }
-
-            8 ->
-                { ls | positionMap = alteredBitmap, i8 = val }
-
-            9 ->
-                { ls | positionMap = alteredBitmap, i9 = val }
-
-            10 ->
-                { ls | positionMap = alteredBitmap, i10 = val }
-
-            11 ->
-                { ls | positionMap = alteredBitmap, i11 = val }
-
-            12 ->
-                { ls | positionMap = alteredBitmap, i12 = val }
-
-            13 ->
-                { ls | positionMap = alteredBitmap, i13 = val }
-
-            14 ->
-                { ls | positionMap = alteredBitmap, i14 = val }
-
-            15 ->
-                { ls | positionMap = alteredBitmap, i15 = val }
-
-            16 ->
-                { ls | positionMap = alteredBitmap, i16 = val }
-
-            17 ->
-                { ls | positionMap = alteredBitmap, i17 = val }
-
-            18 ->
-                { ls | positionMap = alteredBitmap, i18 = val }
-
-            19 ->
-                { ls | positionMap = alteredBitmap, i19 = val }
-
-            20 ->
-                { ls | positionMap = alteredBitmap, i20 = val }
-
-            21 ->
-                { ls | positionMap = alteredBitmap, i21 = val }
-
-            22 ->
-                { ls | positionMap = alteredBitmap, i22 = val }
-
-            23 ->
-                { ls | positionMap = alteredBitmap, i23 = val }
-
-            24 ->
-                { ls | positionMap = alteredBitmap, i24 = val }
-
-            25 ->
-                { ls | positionMap = alteredBitmap, i25 = val }
-
-            26 ->
-                { ls | positionMap = alteredBitmap, i26 = val }
-
-            27 ->
-                { ls | positionMap = alteredBitmap, i27 = val }
-
-            28 ->
-                { ls | positionMap = alteredBitmap, i28 = val }
-
-            29 ->
-                { ls | positionMap = alteredBitmap, i29 = val }
-
-            30 ->
-                { ls | positionMap = alteredBitmap, i30 = val }
-
-            31 ->
-                { ls | positionMap = alteredBitmap, i31 = val }
-
-            _ ->
-                Debug.crash "Index out of bounds"
+        { ls | positionMap = alteredBitmap, blobs = Array.set idx val ls.blobs}
 
 
 hashPositionWithShift : Int -> Int -> Int
@@ -398,16 +147,16 @@ set' shift hash key val ls =
                     else
                         let
                             element =
-                                [ ( key, val ), ( xKey, xVal ) ]
-                                    |> List.sortBy fst
-                                    |> Collision hash
+                                if key < xKey then
+                                    Collision hash [ ( key, val ), ( xKey, xVal ) ]
+                                else
+                                    Collision hash [ ( xKey, xVal ), ( key, val ) ]
                         in
                             setByIndex pos element ls
                 else
                     let
                         subNodes =
-                            empty
-                                |> set' newShift xHash xKey xVal
+                            set' newShift xHash xKey xVal empty
                                 |> set' newShift hash key val
                                 |> SubTree
                     in
@@ -419,7 +168,7 @@ set' shift hash key val ls =
                         newNodes =
                             nodes
                                 |> List.filter (\( k, _ ) -> k /= key)
-                                |> ((::) ( key, val ))
+                                |> ((++) [( key, val )])
                                 |> List.sortBy fst
                     in
                         setByIndex pos (Collision hash newNodes) ls
@@ -429,8 +178,7 @@ set' shift hash key val ls =
                             hashPositionWithShift newShift xHash
 
                         subNodes =
-                            empty
-                                |> setByIndex collisionPos currValue
+                            setByIndex collisionPos currValue empty
                                 |> set' newShift hash key val
                                 |> SubTree
                     in
