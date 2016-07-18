@@ -15,8 +15,10 @@ import Array
 import Bitwise
 import List.Extra exposing (find)
 
+
 type alias Blobs comparable v =
     Array.Array (Node comparable v)
+
 
 type alias Tree comparable v =
     { positionMap : Int
@@ -43,6 +45,7 @@ valueByIndex idx ls =
     case Array.get idx ls.blobs of
         Just node ->
             node
+
         Nothing ->
             Debug.crash "Index out of bounds"
 
@@ -61,7 +64,7 @@ setByIndex idx val ls =
                 _ ->
                     ls.positionMap `Bitwise.or` mask
     in
-        { ls | positionMap = alteredBitmap, blobs = Array.set idx val ls.blobs}
+        { ls | positionMap = alteredBitmap, blobs = Array.set idx val ls.blobs }
 
 
 hashPositionWithShift : Int -> Int -> Int
@@ -168,7 +171,7 @@ set' shift hash key val ls =
                         newNodes =
                             nodes
                                 |> List.filter (\( k, _ ) -> k /= key)
-                                |> ((++) [( key, val )])
+                                |> ((::) ( key, val ))
                                 |> List.sortBy fst
                     in
                         setByIndex pos (Collision hash newNodes) ls
