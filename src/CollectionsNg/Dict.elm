@@ -49,7 +49,7 @@ lists of comparable types.
 -}
 
 import CollectionsNg.Hamt as Hamt exposing (Tree)
-import Murmur3
+import FNV
 
 
 {-| A dictionary of keys and values. So a `(Dict String User)` is a dictionary
@@ -61,8 +61,8 @@ type alias Dict comparable v =
 
 
 hashFn : a -> Int
-hashFn obj =
-    Murmur3.hashString 19456 <| toString obj
+hashFn =
+    toString >> FNV.hashString
 
 
 {-| Create an empty dictionary.
