@@ -15,11 +15,11 @@ main =
         , view = \() -> Html.text "Done!"
         }
         |> Benchmark.run
-            [ --Bench.Dict.tiny
-            --, Bench.Dict.small
-            --, Bench.Dict.medium
-            --, Bench.Dict.large
-            Bench.Array.tiny
+            [ Bench.Dict.tiny
+            , Bench.Dict.small
+            , Bench.Dict.medium
+            , Bench.Dict.large
+            , Bench.Array.tiny
             , Bench.Array.small
             , Bench.Array.medium
             , Bench.Array.large
