@@ -97,14 +97,9 @@ initialize stop f =
             if stop <= idx then
                 acc
             else
-                initialize'
-                    (idx + 1)
-                    { empty | nodes = Hamt.set idx idx (f idx) acc.nodes }
-
+                initialize' (idx + 1) (push (f idx) acc)
     in
-        initialize' 0 { empty | length = stop }
-
-
+        initialize' 0 empty
 
 
 {-| Creates an array with a given length, filled with a default element.
@@ -116,17 +111,7 @@ Notice that `repeat 3 x` is the same as `initialize 3 (always x)`.
 -}
 repeat : Int -> a -> Array a
 repeat n e =
-    let
-        repeat' idx acc =
-            if n <= idx then
-                acc
-            else
-                repeat'
-                    (idx + 1)
-                    { empty | nodes = Hamt.set idx idx (e) acc.nodes }
-
-    in
-        repeat' 0 { empty | length = n }
+    initialize n (always e)
 
 
 {-| Create an array from a list.
