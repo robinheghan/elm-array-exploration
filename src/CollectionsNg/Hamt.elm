@@ -16,19 +16,18 @@ import Bitwise
 import List.Extra exposing (find)
 
 
-type alias Blobs comparable v =
-    Array.Array (Node comparable v)
-
-
 type alias Tree comparable v =
     { positionMap : Int
     , blobs : Blobs comparable v
     }
 
 
+type alias Blobs comparable v =
+    Array.Array (Node comparable v)
+
+
 type Node comparable v
-    = Empty
-    | Element Int comparable v
+    = Element Int comparable v
     | SubTree (Tree comparable v)
     | Collision Int (List ( comparable, v ))
 
@@ -36,18 +35,8 @@ type Node comparable v
 empty : Tree comparable v
 empty =
     { positionMap = 0
-    , blobs = Array.repeat 32 Empty
+    , blobs = Array.empty
     }
-
-
-valueByIndex : Int -> Tree comparable v -> Node comparable v
-valueByIndex idx ls =
-    case Array.get idx ls.blobs of
-        Just node ->
-            node
-
-        Nothing ->
-            Debug.crash "Index out of bounds"
 
 
 setByIndex : Int -> Node comparable v -> Tree comparable v -> Tree comparable v
@@ -57,19 +46,86 @@ setByIndex idx val ls =
             0x01 `Bitwise.shiftLeft` idx
 
         alteredBitmap =
-            case val of
-                Empty ->
-                    ls.positionMap `Bitwise.xor` mask
+            ls.positionMap `Bitwise.or` mask
 
-                _ ->
-                    ls.positionMap `Bitwise.or` mask
+        shouldReplace =
+            ls.positionMap `Bitwise.and` mask == mask
+
+        blobPos =
+            blobPosition idx ls.positionMap
+
+        newBlobs =
+            if shouldReplace then
+                Array.set blobPos val ls.blobs
+            else
+                insertAt blobPos val ls.blobs
     in
-        { ls | positionMap = alteredBitmap, blobs = Array.set idx val ls.blobs }
+        { positionMap = alteredBitmap
+        , blobs = newBlobs
+        }
+
+
+valueByIndex : Int -> Tree comparable v -> Maybe (Node comparable v)
+valueByIndex idx ls =
+    let
+        mask =
+            0x01 `Bitwise.shiftLeft` idx
+
+        hasValue =
+            ls.positionMap `Bitwise.and` mask == mask
+    in
+        if hasValue then
+            Array.get (blobPosition idx ls.positionMap) ls.blobs
+        else
+            Nothing
+
+
+removeByIndex : Int -> Tree comparable v -> Tree comparable v
+removeByIndex idx ls =
+    let
+        mask =
+            0x01 `Bitwise.shiftLeft` idx
+
+        alteredBitmap =
+            ls.positionMap `Bitwise.xor` mask
+    in
+        { positionMap = alteredBitmap
+        , blobs = removeAt (blobPosition idx ls.positionMap) ls.blobs
+        }
+
+
+removeAt : Int -> Blobs comparable v -> Blobs comparable v
+removeAt idx arr =
+    let
+        start =
+            Array.slice 0 idx arr
+
+        end =
+            (Array.slice (idx + 1) (Array.length arr) arr)
+    in
+        Array.append start end
+
+
+insertAt : Int -> Node comparable v -> Blobs comparable v -> Blobs comparable v
+insertAt idx node arr =
+    let
+        start =
+            Array.slice 0 idx arr
+
+        end =
+            (Array.slice idx (Array.length arr) arr)
+    in
+        Array.append (Array.push node start) end
 
 
 hashPositionWithShift : Int -> Int -> Int
 hashPositionWithShift shift hash =
     Bitwise.and 0x1F <| Bitwise.shiftRightLogical hash shift
+
+
+blobPosition : Int -> Int -> Int
+blobPosition idx posMap =
+    countBits ((posMap `Bitwise.shiftLeft` (31 - idx)) `Bitwise.shiftLeft` 1)
 
 
 {-| No idea how this works. Stole code from stack overflow.
@@ -96,30 +152,29 @@ get' shift hash key ls =
     let
         pos =
             hashPositionWithShift shift hash
-
-        node =
-            valueByIndex pos ls
     in
-        case node of
-            Empty ->
+        case valueByIndex pos ls of
+            Nothing ->
                 Nothing
 
-            Element _ eKey value ->
-                if key == eKey then
-                    Just value
-                else
-                    Nothing
+            Just node ->
+                case node of
+                    Element _ eKey value ->
+                        if key == eKey then
+                            Just value
+                        else
+                            Nothing
 
-            SubTree nodes ->
-                get' (shift + 5) hash key nodes
+                    SubTree nodes ->
+                        get' (shift + 5) hash key nodes
 
-            Collision _ vals ->
-                case find (\( k, _ ) -> k == key) vals of
-                    Just ( _, value ) ->
-                        Just value
+                    Collision _ vals ->
+                        case find (\( k, _ ) -> k == key) vals of
+                            Just ( _, value ) ->
+                                Just value
 
-                    Nothing ->
-                        Nothing
+                            Nothing ->
+                                Nothing
 
 
 set : Int -> comparable -> v -> Tree comparable v -> Tree comparable v
@@ -133,66 +188,65 @@ set' shift hash key val ls =
         pos =
             hashPositionWithShift shift hash
 
-        currValue =
-            valueByIndex pos ls
-
         newShift =
             shift + 5
     in
-        case currValue of
-            Empty ->
+        case valueByIndex pos ls of
+            Nothing ->
                 setByIndex pos (Element hash key val) ls
 
-            Element xHash xKey xVal ->
-                if xHash == hash then
-                    if xKey == key then
-                        setByIndex pos (Element hash key val) ls
-                    else
+            Just currValue ->
+                case currValue of
+                    Element xHash xKey xVal ->
+                        if xHash == hash then
+                            if xKey == key then
+                                setByIndex pos (Element hash key val) ls
+                            else
+                                let
+                                    element =
+                                        if key < xKey then
+                                            Collision hash [ ( key, val ), ( xKey, xVal ) ]
+                                        else
+                                            Collision hash [ ( xKey, xVal ), ( key, val ) ]
+                                in
+                                    setByIndex pos element ls
+                        else
+                            let
+                                subNodes =
+                                    set' newShift xHash xKey xVal empty
+                                        |> set' newShift hash key val
+                                        |> SubTree
+                            in
+                                setByIndex pos subNodes ls
+
+                    Collision xHash nodes ->
+                        if xHash == hash then
+                            let
+                                newNodes =
+                                    nodes
+                                        |> List.filter (\( k, _ ) -> k /= key)
+                                        |> ((::) ( key, val ))
+                                        |> List.sortBy fst
+                            in
+                                setByIndex pos (Collision hash newNodes) ls
+                        else
+                            let
+                                collisionPos =
+                                    hashPositionWithShift newShift xHash
+
+                                subNodes =
+                                    setByIndex collisionPos currValue empty
+                                        |> set' newShift hash key val
+                                        |> SubTree
+                            in
+                                setByIndex pos subNodes ls
+
+                    SubTree nodes ->
                         let
-                            element =
-                                if key < xKey then
-                                    Collision hash [ ( key, val ), ( xKey, xVal ) ]
-                                else
-                                    Collision hash [ ( xKey, xVal ), ( key, val ) ]
+                            sub =
+                                set' newShift hash key val nodes
                         in
-                            setByIndex pos element ls
-                else
-                    let
-                        subNodes =
-                            set' newShift xHash xKey xVal empty
-                                |> set' newShift hash key val
-                                |> SubTree
-                    in
-                        setByIndex pos subNodes ls
-
-            Collision xHash nodes ->
-                if xHash == hash then
-                    let
-                        newNodes =
-                            nodes
-                                |> List.filter (\( k, _ ) -> k /= key)
-                                |> ((::) ( key, val ))
-                                |> List.sortBy fst
-                    in
-                        setByIndex pos (Collision hash newNodes) ls
-                else
-                    let
-                        collisionPos =
-                            hashPositionWithShift newShift xHash
-
-                        subNodes =
-                            setByIndex collisionPos currValue empty
-                                |> set' newShift hash key val
-                                |> SubTree
-                    in
-                        setByIndex pos subNodes ls
-
-            SubTree nodes ->
-                let
-                    sub =
-                        set' newShift hash key val nodes
-                in
-                    setByIndex pos (SubTree sub) ls
+                            setByIndex pos (SubTree sub) ls
 
 
 remove : Int -> comparable -> Tree comparable v -> Tree comparable v
@@ -205,97 +259,70 @@ remove' shift hash key nl =
     let
         pos =
             hashPositionWithShift shift hash
-
-        node =
-            valueByIndex pos nl
     in
-        case node of
-            Empty ->
+        case valueByIndex pos nl of
+            Nothing ->
                 nl
 
-            Element _ eKey value ->
-                if eKey == key then
-                    setByIndex pos Empty nl
-                else
-                    nl
+            Just node ->
+                case node of
+                    Element _ eKey value ->
+                        if eKey == key then
+                            removeByIndex pos nl
+                        else
+                            nl
 
-            SubTree nodes ->
-                let
-                    newSub =
-                        remove' (shift + 5) hash key nodes
-                in
-                    if countBits newSub.positionMap == 1 then
-                        setByIndex pos (getFirstValue newSub) nl
-                    else
-                        setByIndex pos (SubTree newSub) nl
+                    SubTree nodes ->
+                        let
+                            newSub =
+                                remove' (shift + 5) hash key nodes
+                        in
+                            if Array.length newSub.blobs == 1 then
+                                case Array.get 0 newSub.blobs of
+                                    Just v ->
+                                        setByIndex pos v nl
 
-            Collision _ vals ->
-                let
-                    newCollision =
-                        List.filter (\( k, _ ) -> k /= key) vals
+                                    Nothing ->
+                                        Debug.crash "Cannot happen."
+                            else
+                                setByIndex pos (SubTree newSub) nl
 
-                    newLength =
-                        List.length newCollision
-                in
-                    if newLength == 1 then
-                        case List.head newCollision of
-                            Just ( k, v ) ->
-                                setByIndex pos (Element hash k v) nl
+                    Collision _ vals ->
+                        let
+                            newCollision =
+                                List.filter (\( k, _ ) -> k /= key) vals
+                        in
+                            if List.length newCollision == 1 then
+                                case List.head newCollision of
+                                    Just ( k, v ) ->
+                                        setByIndex pos (Element hash k v) nl
 
-                            Nothing ->
-                                Debug.crash "This should not happen."
-                    else
-                        setByIndex pos (Collision hash newCollision) nl
-
-
-getFirstValue : Tree comparable v -> Node comparable v
-getFirstValue ls =
-    getFirstValue' 0 ls
-
-
-getFirstValue' : Int -> Tree comparable v -> Node comparable v
-getFirstValue' pos ls =
-    if pos > 31 then
-        Empty
-    else
-        let
-            node =
-                valueByIndex pos ls
-        in
-            case node of
-                Empty ->
-                    getFirstValue' (pos + 1) ls
-
-                _ ->
-                    node
+                                    Nothing ->
+                                        Debug.crash "This should not happen."
+                            else
+                                setByIndex pos (Collision hash newCollision) nl
 
 
 foldl : (comparable -> v -> a -> a) -> a -> Tree comparable v -> a
 foldl folder acc nl =
-    foldl' folder acc 0 nl
+    Array.foldl
+        (\node acc ->
+            case node of
+                Element _ key val ->
+                    folder key val acc
 
+                SubTree nodes ->
+                    foldl folder acc nodes
 
-foldl' : (comparable -> v -> a -> a) -> a -> Int -> Tree comparable v -> a
-foldl' folder acc pos nl =
-    if pos > 31 then
+                Collision _ vals ->
+                    let
+                        colFold ( k, v ) acc =
+                            folder k v acc
+                    in
+                        List.foldl colFold acc vals
+        )
         acc
-    else
-        case valueByIndex pos nl of
-            Empty ->
-                foldl' folder acc (pos + 1) nl
-
-            Element _ key val ->
-                foldl' folder (folder key val acc) (pos + 1) nl
-
-            SubTree nodes ->
-                foldl' folder (foldl folder acc nodes) (pos + 1) nl
-
-            Collision _ vals ->
-                let
-                    colFold ( k, v ) acc =
-                        folder k v acc
-                in
-                    foldl' folder (List.foldl colFold acc vals) (pos + 1) nl
+        nl.blobs
 
 
 size : Tree comparable v -> Int
