@@ -53,14 +53,19 @@ get arr =
     \() -> Array.get 5 arr
 
 
+append : Input -> Input -> () -> Input
+append a1 a2 =
+    \() -> Array.append a1 a2
+
+
 slice : Int -> Int -> Input -> () -> Input
 slice from to arr =
     \() -> Array.slice from to arr
 
 
-map : Input -> () -> Input
-map arr =
-    \() -> Array.map ((+) 1) arr
+fold : Input -> () -> Int
+fold arr =
+    \() -> Array.foldl (\_ acc -> acc + 1) 0 arr
 
 
 equality : Input -> Input -> () -> Bool
@@ -84,12 +89,14 @@ createSuite n =
             <| push sampleArray
         , bench "Get"
             <| get sampleArray
+        , bench "Append"
+            <| append sampleArray sampleArray
         , bench "Slice from end"
             <| slice 0 -3 sampleArray
         , bench "Slice from both"
             <| slice 3 -3 sampleArray
-        , bench "Mapping"
-            <| map sampleArray
+        , bench "Fold"
+            <| fold sampleArray
         , bench "Equality"
             <| equality sampleArray (Array.set 5 5 sampleArray)
         , bench "Equality fail"

@@ -2,6 +2,7 @@ module CollectionsNg.Hamt
     exposing
         ( Tree
         , empty
+        , hashPositionWithShift
         , get
         , set
         , remove

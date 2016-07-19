@@ -43,7 +43,8 @@ same type.
 @docs map, indexedMap, filter, foldl, foldr
 -}
 
-import CollectionsNg.Hamt as Hamt exposing (Tree)
+import CollectionsNg.Hamt exposing (hashPositionWithShift)
+import Array as CoreArray
 
 
 {-| Representation of fast immutable arrays. You can create arrays of integers
@@ -52,8 +53,23 @@ dream up.
 -}
 type alias Array a =
     { length : Int
-    , nodes : Tree Int a
+    , startShift : Int
+    , tree : Tree a
     }
+
+
+type alias Tree a =
+    CoreArray.Array (Node a)
+
+
+type Node a
+    = Value a
+    | SubTree (Tree a)
+
+
+crashMsg : String
+crashMsg =
+    "This is a bug. Please report this."
 
 
 {-| Return an empty array.
@@ -62,7 +78,7 @@ type alias Array a =
 -}
 empty : Array a
 empty =
-    Array 0 Hamt.empty
+    Array 0 0 CoreArray.empty
 
 
 {-| Determine if an array is empty.
@@ -71,7 +87,7 @@ empty =
 -}
 isEmpty : Array a -> Bool
 isEmpty arr =
-    arr.length == 0
+    length arr == 0
 
 
 {-| Return the length of an array.
@@ -146,9 +162,80 @@ toIndexedList arr =
 -}
 push : a -> Array a -> Array a
 push a arr =
-    { length = arr.length + 1
-    , nodes = Hamt.set arr.length arr.length a arr.nodes
-    }
+    let
+        newLen =
+            arr.length + 1
+    in
+        { length = newLen
+        , startShift = startShift newLen
+        , tree = push' arr.startShift arr.length a arr.tree
+        }
+
+
+push' : Int -> Int -> a -> Tree a -> Tree a
+push' shift idx val tree =
+    let
+        pos =
+            hashPositionWithShift shift idx
+
+        arrLen =
+            CoreArray.length tree
+    in
+        if arrLen >= 32 then
+            CoreArray.empty
+                |> CoreArray.push (SubTree tree)
+                |> CoreArray.push (Value val)
+            -- Workaround bug in CoreArray
+        else if arrLen == 31 then
+            CoreArray.initialize 32
+                (\i ->
+                    if i == 31 then
+                        (Value val)
+                    else
+                        case CoreArray.get i tree of
+                            Just x ->
+                                x
+
+                            Nothing ->
+                                Debug.crash crashMsg
+                )
+        else
+            case CoreArray.get pos tree of
+                Just x ->
+                    case x of
+                        Value _ ->
+                            let
+                                subTree =
+                                    CoreArray.empty
+                                        |> CoreArray.push x
+                                        |> CoreArray.push (Value val)
+                                        |> SubTree
+                            in
+                                CoreArray.set pos subTree tree
+
+                        SubTree subTree ->
+                            let
+                                newSub =
+                                    push' (shift - 5) idx val subTree
+                                        |> SubTree
+                            in
+                                CoreArray.set pos newSub tree
+
+                Nothing ->
+                    CoreArray.push (Value val) tree
+
+
+startShift : Int -> Int
+startShift len =
+    if len == 0 then
+        0
+    else
+        (len
+            |> toFloat
+            |> logBase 32
+            |> floor
+        )
+            * 5
 
 
 {-| Return Just the element at the index or Nothing if the index is out of range.
@@ -160,10 +247,26 @@ push a arr =
 -}
 get : Int -> Array a -> Maybe a
 get idx arr =
-    if idx >= arr.length || idx < 0 then
-        Nothing
-    else
-        Hamt.get idx idx arr.nodes
+    get' arr.startShift idx arr.tree
+
+
+get' : Int -> Int -> Tree a -> Maybe a
+get' shift idx tree =
+    let
+        pos =
+            hashPositionWithShift shift idx
+    in
+        case CoreArray.get pos tree of
+            Just x ->
+                case x of
+                    Value v ->
+                        Just v
+
+                    SubTree subTree ->
+                        get' (shift - 5) idx subTree
+
+            Nothing ->
+                Nothing
 
 
 {-| Set the element at a particular index. Returns an updated array.
@@ -173,10 +276,32 @@ If the index is out of range, the array is unaltered.
 -}
 set : Int -> a -> Array a -> Array a
 set idx val arr =
-    if idx >= arr.length || idx < 0 then
+    if idx < 0 || idx >= arr.length then
         arr
     else
-        { arr | nodes = Hamt.set idx idx val arr.nodes }
+        { length = arr.length
+        , startShift = arr.startShift
+        , tree = set' arr.startShift idx val arr.tree
+        }
+
+
+set' : Int -> Int -> a -> Tree a -> Tree a
+set' shift idx val tree =
+    let
+        pos =
+            hashPositionWithShift shift idx
+    in
+        case CoreArray.get pos tree of
+            Just x ->
+                case x of
+                    Value _ ->
+                        CoreArray.set pos (Value val) tree
+
+                    SubTree subTree ->
+                        set' (shift - 5) idx val subTree
+
+            Nothing ->
+                Debug.crash crashMsg
 
 
 {-| Reduce an array from the right. Read `foldr` as fold from the right.
@@ -184,21 +309,17 @@ set idx val arr =
     foldr (+) 0 (repeat 3 5) == 15
 -}
 foldr : (a -> b -> b) -> b -> Array a -> b
-foldr folder init arr =
-    foldr' folder init (arr.length - 1) arr
+foldr f init arr =
+    let
+        foldr' i acc =
+            case i of
+                Value v ->
+                    f v acc
 
-
-foldr' : (a -> b -> b) -> b -> Int -> Array a -> b
-foldr' folder acc idx arr =
-    if idx == -1 then
-        acc
-    else
-        case Hamt.get idx idx arr.nodes of
-            Just x ->
-                foldr' folder (folder x acc) (idx - 1) arr
-
-            Nothing ->
-                Debug.crash "This is a bug. Please report this."
+                SubTree subTree ->
+                    CoreArray.foldr foldr' acc subTree
+    in
+        CoreArray.foldr foldr' init arr.tree
 
 
 {-| Reduce an array from the left. Read `foldl` as fold from the left.
@@ -206,21 +327,17 @@ foldr' folder acc idx arr =
     foldl (::) [] (fromList [1,2,3]) == [3,2,1]
 -}
 foldl : (a -> b -> b) -> b -> Array a -> b
-foldl folder init arr =
-    foldl' folder init 0 arr
+foldl f init arr =
+    let
+        foldl' i acc =
+            case i of
+                Value v ->
+                    f v acc
 
-
-foldl' : (a -> b -> b) -> b -> Int -> Array a -> b
-foldl' folder acc idx arr =
-    if idx == arr.length then
-        acc
-    else
-        case Hamt.get idx idx arr.nodes of
-            Just x ->
-                foldl' folder (folder x acc) (idx + 1) arr
-
-            Nothing ->
-                Debug.crash "This is a bug. Please report this."
+                SubTree subTree ->
+                    CoreArray.foldl foldl' acc subTree
+    in
+        CoreArray.foldl foldl' init arr.tree
 
 
 {-| Append two arrays to a new one.
@@ -271,12 +388,12 @@ indexedMap' mapper acc idx arr =
     if idx == arr.length then
         acc
     else
-        case Hamt.get idx idx arr.nodes of
+        case get idx arr of
             Just x ->
                 indexedMap' mapper (push (mapper idx x) acc) (idx + 1) arr
 
             Nothing ->
-                Debug.crash "This is a bug. Please report this."
+                Debug.crash crashMsg
 
 
 {-| Get a sub-section of an array: `(slice start end array)`. The `start` is a
@@ -315,12 +432,12 @@ slice' from to acc arr =
     if from == to then
         acc
     else
-        case Hamt.get from from arr.nodes of
+        case get from arr of
             Just x ->
                 slice' (from + 1) to (push x acc) arr
 
             Nothing ->
-                Debug.crash "This is a bug. Please report this."
+                Debug.crash crashMsg
 
 
 translateIndex : Int -> Array a -> Int
