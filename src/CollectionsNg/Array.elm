@@ -43,6 +43,7 @@ same type.
 @docs map, indexedMap, filter, foldl, foldr
 -}
 
+import Bitwise
 import CollectionsNg.Hamt exposing (hashPositionWithShift)
 import Array as CoreArray
 
@@ -55,6 +56,7 @@ type alias Array a =
     { length : Int
     , startShift : Int
     , tree : Tree a
+    , tail : Tree a
     }
 
 
@@ -78,7 +80,7 @@ crashMsg =
 -}
 empty : Array a
 empty =
-    Array 0 0 CoreArray.empty
+    Array 0 5 CoreArray.empty CoreArray.empty
 
 
 {-| Determine if an array is empty.
@@ -169,8 +171,17 @@ push a arr =
         newShift =
             calcStartShift newLen
 
+        newTail =
+            CoreArray.push (Value a) arr.tail
+
+        tailLen =
+            CoreArray.length newTail
+
         newTree =
-            push' arr.startShift arr.length a arr.tree
+            if tailLen == 32 then
+                tailPush arr.startShift arr.length newTail arr.tree
+            else
+                arr.tree
     in
         { length = newLen
         , startShift = newShift
@@ -179,11 +190,16 @@ push a arr =
                 CoreArray.push (SubTree newTree) CoreArray.empty
             else
                 newTree
+        , tail =
+            if tailLen == 32 then
+                CoreArray.empty
+            else
+                newTail
         }
 
 
-push' : Int -> Int -> a -> Tree a -> Tree a
-push' shift idx val tree =
+tailPush : Int -> Int -> Tree a -> Tree a -> Tree a
+tailPush shift idx tail tree =
     let
         pos =
             hashPositionWithShift shift idx
@@ -191,30 +207,25 @@ push' shift idx val tree =
         case CoreArray.get pos tree of
             Just x ->
                 case x of
-                    Value _ ->
-                        let
-                            subTree =
-                                CoreArray.empty
-                                    |> CoreArray.push x
-                                    |> push' (shift - 5) idx val
-                        in
-                            CoreArray.set pos (SubTree subTree) tree
-
                     SubTree subTree ->
                         let
                             newSub =
-                                push' (shift - 5) idx val subTree
+                                tailPush (shift - 5) idx tail subTree
                         in
                             CoreArray.set pos (SubTree newSub) tree
 
+                    Value _ ->
+                        CoreArray.push (SubTree tree) CoreArray.empty
+                            |> tailPush shift idx tail
+
             Nothing ->
-                CoreArray.push (Value val) tree
+                CoreArray.push (SubTree tail) tree
 
 
 calcStartShift : Int -> Int
 calcStartShift len =
-    if len == 0 then
-        0
+    if len < 1024 then
+        5
     else
         (len
             |> toFloat
@@ -222,6 +233,14 @@ calcStartShift len =
             |> floor
         )
             * 5
+
+
+tailPrefix : Int -> Int
+tailPrefix len =
+    if len < 32 then
+        0
+    else
+        ((len - 1) `Bitwise.shiftRightLogical` 5) `Bitwise.shiftLeft` 5
 
 
 {-| Return Just the element at the index or Nothing if the index is out of range.
@@ -233,7 +252,20 @@ calcStartShift len =
 -}
 get : Int -> Array a -> Maybe a
 get idx arr =
-    get' arr.startShift idx arr.tree
+    if idx >= (tailPrefix arr.length) then
+        case CoreArray.get (idx `Bitwise.and` 0x1F) arr.tail of
+            Just x ->
+                case x of
+                    Value v ->
+                        Just v
+
+                    SubTree _ ->
+                        Debug.crash crashMsg
+
+            Nothing ->
+                Nothing
+    else
+        get' arr.startShift idx arr.tree
 
 
 get' : Int -> Int -> Tree a -> Maybe a
@@ -264,10 +296,17 @@ set : Int -> a -> Array a -> Array a
 set idx val arr =
     if idx < 0 || idx >= arr.length then
         arr
+    else if idx >= (tailPrefix arr.length) then
+        { length = arr.length
+        , startShift = arr.startShift
+        , tree = arr.tree
+        , tail = CoreArray.set (idx `Bitwise.and` 0x1F) (Value val) arr.tail
+        }
     else
         { length = arr.length
         , startShift = arr.startShift
         , tree = set' arr.startShift idx val arr.tree
+        , tail = arr.tail
         }
 
 
@@ -304,8 +343,11 @@ foldr f init arr =
 
                 SubTree subTree ->
                     CoreArray.foldr foldr' acc subTree
+
+        tail =
+            CoreArray.foldr foldr' init arr.tail
     in
-        CoreArray.foldr foldr' init arr.tree
+        CoreArray.foldr foldr' tail arr.tree
 
 
 {-| Reduce an array from the left. Read `foldl` as fold from the left.
@@ -322,8 +364,11 @@ foldl f init arr =
 
                 SubTree subTree ->
                     CoreArray.foldl foldl' acc subTree
+
+        tree =
+            CoreArray.foldl foldl' init arr.tree
     in
-        CoreArray.foldl foldl' init arr.tree
+        CoreArray.foldl foldl' tree arr.tail
 
 
 {-| Append two arrays to a new one.

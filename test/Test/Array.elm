@@ -43,8 +43,8 @@ init' =
                     |> Expect.equal [ 0, 0, 0 ]
         , test "Large build"
             <| \() ->
-                toList (initialize 10000 identity)
-                    |> Expect.equal [0..9999]
+                toList (initialize 40000 identity)
+                    |> Expect.equal [0..39999]
         ]
 
 
@@ -130,6 +130,14 @@ getSet =
             <| \() ->
                 set 3 5 (fromList [ 1, 2, 3 ])
                     |> Expect.equal (fromList [ 1, 2, 3 ])
+        , test "can retrieve from tail"
+            <| \() ->
+                get 1026 (fromList [0..1030])
+                    |> Expect.equal (Just 1026)
+        , test "can retrieve from tree"
+            <| \() ->
+                get 1022 (fromList [0..1030])
+                    |> Expect.equal (Just 1022)
         ]
 
 
