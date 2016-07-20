@@ -219,7 +219,7 @@ tailPush shift idx tail tree =
                             CoreArray.set pos (SubTree newSub) tree
 
                     Value _ ->
-                        CoreArray.push (SubTree tree) CoreArray.empty
+                        CoreArray.singleton (SubTree tree)
                             |> tailPush shift idx tail
 
             Nothing ->
