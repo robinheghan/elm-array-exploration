@@ -41,6 +41,10 @@ init' =
             <| \() ->
                 toList (repeat 3 0)
                     |> Expect.equal [ 0, 0, 0 ]
+        , test "Large build"
+            <| \() ->
+                toList (initialize 10000 identity)
+                    |> Expect.equal [0..9999]
         ]
 
 

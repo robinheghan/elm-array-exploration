@@ -165,10 +165,20 @@ push a arr =
     let
         newLen =
             arr.length + 1
+
+        newShift =
+            calcStartShift newLen
+
+        newTree =
+            push' arr.startShift arr.length a arr.tree
     in
         { length = newLen
-        , startShift = startShift newLen
-        , tree = push' arr.startShift arr.length a arr.tree
+        , startShift = newShift
+        , tree =
+            if newShift > arr.startShift then
+                CoreArray.push (SubTree newTree) CoreArray.empty
+            else
+                newTree
         }
 
 
@@ -177,56 +187,32 @@ push' shift idx val tree =
     let
         pos =
             hashPositionWithShift shift idx
-
-        arrLen =
-            CoreArray.length tree
     in
-        if arrLen >= 32 then
-            CoreArray.empty
-                |> CoreArray.push (SubTree tree)
-                |> CoreArray.push (Value val)
-            -- Workaround bug in CoreArray
-        else if arrLen == 31 then
-            CoreArray.initialize 32
-                (\i ->
-                    if i == 31 then
-                        (Value val)
-                    else
-                        case CoreArray.get i tree of
-                            Just x ->
-                                x
+        case CoreArray.get pos tree of
+            Just x ->
+                case x of
+                    Value _ ->
+                        let
+                            subTree =
+                                CoreArray.empty
+                                    |> CoreArray.push x
+                                    |> push' (shift - 5) idx val
+                        in
+                            CoreArray.set pos (SubTree subTree) tree
 
-                            Nothing ->
-                                Debug.crash crashMsg
-                )
-        else
-            case CoreArray.get pos tree of
-                Just x ->
-                    case x of
-                        Value _ ->
-                            let
-                                subTree =
-                                    CoreArray.empty
-                                        |> CoreArray.push x
-                                        |> CoreArray.push (Value val)
-                                        |> SubTree
-                            in
-                                CoreArray.set pos subTree tree
+                    SubTree subTree ->
+                        let
+                            newSub =
+                                push' (shift - 5) idx val subTree
+                        in
+                            CoreArray.set pos (SubTree newSub) tree
 
-                        SubTree subTree ->
-                            let
-                                newSub =
-                                    push' (shift - 5) idx val subTree
-                                        |> SubTree
-                            in
-                                CoreArray.set pos newSub tree
-
-                Nothing ->
-                    CoreArray.push (Value val) tree
+            Nothing ->
+                CoreArray.push (Value val) tree
 
 
-startShift : Int -> Int
-startShift len =
+calcStartShift : Int -> Int
+calcStartShift len =
     if len == 0 then
         0
     else
