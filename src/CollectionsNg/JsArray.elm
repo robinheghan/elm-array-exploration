@@ -1,0 +1,58 @@
+module CollectionsNg.JsArray
+    exposing
+        ( JsArray
+        , empty
+        , singleton
+        , length
+        , get
+        , set
+        , push
+        , foldl
+        , foldr
+        )
+
+import Native.JsArray
+
+
+type JsArray a
+    = JsArray a
+
+
+empty : JsArray a
+empty =
+    Native.JsArray.empty
+
+
+singleton : a -> JsArray a
+singleton =
+    Native.JsArray.singleton
+
+
+length : JsArray a -> Int
+length =
+    Native.JsArray.length
+
+
+get : Int -> JsArray a -> Maybe a
+get =
+    Native.JsArray.get
+
+
+set : Int -> a -> JsArray a -> JsArray a
+set =
+    Native.JsArray.set
+
+
+push : a -> JsArray a -> JsArray a
+push =
+    Native.JsArray.push
+
+
+foldl : (a -> b -> b) -> b -> JsArray a -> b
+foldl =
+    Native.JsArray.foldl
+
+
+foldr : (a -> b -> b) -> b -> JsArray a -> b
+foldr =
+    Native.JsArray.foldr

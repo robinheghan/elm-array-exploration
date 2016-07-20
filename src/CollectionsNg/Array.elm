@@ -45,7 +45,7 @@ same type.
 
 import Bitwise
 import CollectionsNg.Hamt exposing (hashPositionWithShift)
-import Array as CoreArray
+import CollectionsNg.JsArray as CoreArray
 
 
 {-| Representation of fast immutable arrays. You can create arrays of integers
@@ -61,7 +61,7 @@ type alias Array a =
 
 
 type alias Tree a =
-    CoreArray.Array (Node a)
+    CoreArray.JsArray (Node a)
 
 
 type Node a
@@ -191,7 +191,7 @@ push a arr =
         , startShift = newShift
         , tree =
             if newShift > arr.startShift then
-                CoreArray.push (SubTree newTree) CoreArray.empty
+                CoreArray.singleton (SubTree newTree)
             else
                 newTree
         , tail =

@@ -3,6 +3,7 @@
     "summary": "Stable Array, Dict and Set implementations for Elm.",
     "repository": "https://github.com/Skinney/collections-ng.git",
     "license": "BSD3",
+    "native-modues": true,
     "source-directories": [
         "src"
     ],
