@@ -89,7 +89,7 @@ empty =
 -}
 isEmpty : Array a -> Bool
 isEmpty arr =
-    length arr == 0
+    arr.length == 0
 
 
 {-| Return the length of an array.
@@ -227,12 +227,7 @@ calcStartShift len =
     if len < 1024 then
         5
     else
-        (len
-            |> toFloat
-            |> logBase 32
-            |> floor
-        )
-            * 5
+        (len |> toFloat |> logBase 32 |> floor) * 5
 
 
 tailPrefix : Int -> Int
@@ -265,11 +260,11 @@ get idx arr =
             Nothing ->
                 Nothing
     else
-        get' arr.startShift idx arr.tree
+        getRecursive arr.startShift idx arr.tree
 
 
-get' : Int -> Int -> Tree a -> Maybe a
-get' shift idx tree =
+getRecursive : Int -> Int -> Tree a -> Maybe a
+getRecursive shift idx tree =
     let
         pos =
             hashPositionWithShift shift idx
@@ -281,7 +276,7 @@ get' shift idx tree =
                         Just v
 
                     SubTree subTree ->
-                        get' (shift - 5) idx subTree
+                        getRecursive (shift - 5) idx subTree
 
             Nothing ->
                 Nothing
@@ -305,13 +300,13 @@ set idx val arr =
     else
         { length = arr.length
         , startShift = arr.startShift
-        , tree = set' arr.startShift idx val arr.tree
+        , tree = setRecursive arr.startShift idx val arr.tree
         , tail = arr.tail
         }
 
 
-set' : Int -> Int -> a -> Tree a -> Tree a
-set' shift idx val tree =
+setRecursive : Int -> Int -> a -> Tree a -> Tree a
+setRecursive shift idx val tree =
     let
         pos =
             hashPositionWithShift shift idx
@@ -323,7 +318,7 @@ set' shift idx val tree =
                         CoreArray.set pos (Value val) tree
 
                     SubTree subTree ->
-                        set' (shift - 5) idx val subTree
+                        setRecursive (shift - 5) idx val subTree
 
             Nothing ->
                 Debug.crash crashMsg
@@ -385,10 +380,10 @@ append a b =
     filter isEven (fromList [1..6]) == (fromList [2,4,6])
 -}
 filter : (a -> Bool) -> Array a -> Array a
-filter pred arr =
+filter f arr =
     let
         update n acc =
-            if pred n then
+            if f n then
                 push n acc
             else
                 acc
@@ -401,8 +396,8 @@ filter pred arr =
     map sqrt (fromList [1,4,9]) == fromList [1,2,3]
 -}
 map : (a -> b) -> Array a -> Array b
-map mapper arr =
-    foldl (\n acc -> push (mapper n) acc) empty arr
+map f arr =
+    foldl (\n acc -> push (f n) acc) empty arr
 
 
 {-| Apply a function on every element with its index as first argument.
@@ -410,18 +405,18 @@ map mapper arr =
     indexedMap (*) (fromList [5,5,5]) == fromList [0,5,10]
 -}
 indexedMap : (Int -> a -> b) -> Array a -> Array b
-indexedMap mapper arr =
-    indexedMap' mapper empty 0 arr
+indexedMap f arr =
+    indexedMapHelp f empty 0 arr
 
 
-indexedMap' : (Int -> a -> b) -> Array b -> Int -> Array a -> Array b
-indexedMap' mapper acc idx arr =
+indexedMapHelp : (Int -> a -> b) -> Array b -> Int -> Array a -> Array b
+indexedMapHelp f acc idx arr =
     if idx == arr.length then
         acc
     else
         case get idx arr of
             Just x ->
-                indexedMap' mapper (push (mapper idx x) acc) (idx + 1) arr
+                indexedMapHelp f (push (f idx x) acc) (idx + 1) arr
 
             Nothing ->
                 Debug.crash crashMsg
@@ -455,17 +450,17 @@ slice from to arr =
         if isEmpty arr || correctFrom > correctTo then
             empty
         else
-            slice' correctFrom correctTo empty arr
+            sliceHelp correctFrom correctTo empty arr
 
 
-slice' : Int -> Int -> Array a -> Array a -> Array a
-slice' from to acc arr =
+sliceHelp : Int -> Int -> Array a -> Array a -> Array a
+sliceHelp from to acc arr =
     if from == to then
         acc
     else
         case get from arr of
             Just x ->
-                slice' (from + 1) to (push x acc) arr
+                sliceHelp (from + 1) to (push x acc) arr
 
             Nothing ->
                 Debug.crash crashMsg
