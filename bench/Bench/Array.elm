@@ -68,6 +68,16 @@ fold arr =
     \() -> Array.foldl (\_ acc -> acc + 1) 0 arr
 
 
+indexedMap : Input -> () -> Array.Array ( Int, Int )
+indexedMap arr =
+    \() -> Array.indexedMap (,) arr
+
+
+indexedList : Input -> () -> List ( Int, Int )
+indexedList arr =
+    \() -> Array.toIndexedList arr
+
+
 equality : Input -> Input -> () -> Bool
 equality a1 a2 =
     \() -> a1 == a2
@@ -97,6 +107,10 @@ createSuite n =
             <| slice 3 -3 sampleArray
         , bench "Fold"
             <| fold sampleArray
+        , bench "Indexed Map"
+            <| indexedMap sampleArray
+        , bench "Indexed List"
+            <| indexedList sampleArray
         , bench "Equality"
             <| equality sampleArray (Array.set 5 5 sampleArray)
         , bench "Equality fail"

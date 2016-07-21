@@ -155,7 +155,11 @@ paired with its index.
 -}
 toIndexedList : Array a -> List ( Int, a )
 toIndexedList arr =
-    List.map2 (,) [0..(arr.length - 1)] (toList arr)
+    let
+        foldr' n ( idx, ls ) =
+            ( idx - 1, ( idx, n ) :: ls )
+    in
+        snd <| foldr foldr' ( length arr - 1, [] ) arr
 
 
 {-| Push an element to the end of an array.
@@ -406,20 +410,11 @@ map f arr =
 -}
 indexedMap : (Int -> a -> b) -> Array a -> Array b
 indexedMap f arr =
-    indexedMapHelp f empty 0 arr
-
-
-indexedMapHelp : (Int -> a -> b) -> Array b -> Int -> Array a -> Array b
-indexedMapHelp f acc idx arr =
-    if idx == arr.length then
-        acc
-    else
-        case get idx arr of
-            Just x ->
-                indexedMapHelp f (push (f idx x) acc) (idx + 1) arr
-
-            Nothing ->
-                Debug.crash crashMsg
+    let
+        foldl' i ( idx, acc ) =
+            ( idx + 1, push (f idx i) acc )
+    in
+        snd <| foldl foldl' ( 0, empty ) arr
 
 
 {-| Get a sub-section of an array: `(slice start end array)`. The `start` is a
@@ -450,20 +445,14 @@ slice from to arr =
         if isEmpty arr || correctFrom > correctTo then
             empty
         else
-            sliceHelp correctFrom correctTo empty arr
-
-
-sliceHelp : Int -> Int -> Array a -> Array a -> Array a
-sliceHelp from to acc arr =
-    if from == to then
-        acc
-    else
-        case get from arr of
-            Just x ->
-                sliceHelp (from + 1) to (push x acc) arr
-
-            Nothing ->
-                Debug.crash crashMsg
+            let
+                foldl' i ( idx, acc ) =
+                    if idx >= correctFrom && idx < correctTo then
+                        ( idx + 1, push i acc )
+                    else
+                        ( idx + 1, acc )
+            in
+                snd <| foldl foldl' ( 0, empty ) arr
 
 
 translateIndex : Int -> Array a -> Int
