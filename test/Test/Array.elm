@@ -194,6 +194,14 @@ transform =
             <| \() ->
                 toList (slice 2 5 (fromList [1..8]))
                     |> Expect.equal [3..5]
+        , test "start slice"
+            <| \() ->
+                let
+                    arr =
+                        fromList [1..10]
+                in
+                    toList (slice 2 (length arr) arr)
+                        |> Expect.equal [3..10]
         , test "negative slice"
             <| \() ->
                 toList (slice -5 -2 (fromList [1..8]))
