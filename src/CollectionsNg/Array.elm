@@ -110,14 +110,24 @@ the element at index `i` initialized to the result of `(f i)`.
 -}
 initialize : Int -> (Int -> a) -> Array a
 initialize stop f =
-    let
-        initialize' idx acc =
-            if stop <= idx then
-                acc
-            else
-                initialize' (idx + 1) (push (f idx) acc)
-    in
-        initialize' 0 empty
+    if stop <= 0 then
+        empty
+    else
+        let
+            initialize' at f acc =
+                let
+                    rem =
+                        stop - at
+
+                    helper idx =
+                        Value (f (at + idx))
+                in
+                    if rem <= 32 then
+                        pushTree stop (CoreArray.initialize rem helper) acc
+                    else
+                        initialize' (at + 32) f (pushTree 32 (CoreArray.initialize 32 helper) acc)
+        in
+            initialize' 0 f empty
 
 
 {-| Creates an array with a given length, filled with a default element.
@@ -168,15 +178,17 @@ toIndexedList arr =
 -}
 push : a -> Array a -> Array a
 push a arr =
+    pushTree 1 (CoreArray.push (Value a) arr.tail) arr
+
+
+pushTree : Int -> Tree a -> Array a -> Array a
+pushTree mod newTail arr =
     let
         newLen =
-            arr.length + 1
+            arr.length + mod
 
         newShift =
             calcStartShift newLen
-
-        newTail =
-            CoreArray.push (Value a) arr.tail
 
         tailLen =
             CoreArray.length newTail

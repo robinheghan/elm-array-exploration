@@ -3,6 +3,7 @@ module CollectionsNg.JsArray
         ( JsArray
         , empty
         , singleton
+        , initialize
         , length
         , get
         , set
@@ -26,6 +27,11 @@ empty =
 singleton : a -> JsArray a
 singleton =
     Native.JsArray.singleton
+
+
+initialize : Int -> (Int -> a) -> JsArray a
+initialize =
+    Native.JsArray.initialize
 
 
 length : JsArray a -> Int
