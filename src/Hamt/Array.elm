@@ -1,4 +1,4 @@
-module CollectionsNg.Array
+module Hamt.Array
     exposing
         ( Array
         , empty
@@ -44,8 +44,7 @@ same type.
 -}
 
 import Bitwise
-import CollectionsNg.Hamt exposing (hashPositionWithShift)
-import CollectionsNg.JsArray as CoreArray
+import Hamt.JsArray as CoreArray
 
 
 {-| Representation of fast immutable arrays. You can create arrays of integers
@@ -218,7 +217,7 @@ tailPush : Int -> Int -> Tree a -> Tree a -> Tree a
 tailPush shift idx tail tree =
     let
         pos =
-            hashPositionWithShift shift idx
+            indexShift shift idx
     in
         case CoreArray.get pos tree of
             Just x ->
@@ -254,6 +253,11 @@ tailPrefix len =
         ((len - 1) `Bitwise.shiftRightLogical` 5) `Bitwise.shiftLeft` 5
 
 
+indexShift : Int -> Int -> Int
+indexShift shift hash =
+    Bitwise.and 0x1F <| Bitwise.shiftRightLogical hash shift
+
+
 {-| Return Just the element at the index or Nothing if the index is out of range.
 
     get  0 (fromList [0,1,2]) == Just 0
@@ -283,7 +287,7 @@ getRecursive : Int -> Int -> Tree a -> Maybe a
 getRecursive shift idx tree =
     let
         pos =
-            hashPositionWithShift shift idx
+            indexShift shift idx
     in
         case CoreArray.get pos tree of
             Just x ->
@@ -325,7 +329,7 @@ setRecursive : Int -> Int -> a -> Tree a -> Tree a
 setRecursive shift idx val tree =
     let
         pos =
-            hashPositionWithShift shift idx
+            indexShift shift idx
     in
         case CoreArray.get pos tree of
             Just x ->

@@ -1,26 +1,11 @@
-module Bench.Array exposing (tiny, small, medium, large)
+module Bench.Array exposing (large)
 
 import Bench.Native exposing (Benchmark, BenchmarkSuite, bench, suite)
-import CollectionsNg.Array as Array exposing (Array)
+import Hamt.Array as Array exposing (Array)
 
 
 type alias Input =
     Array Int
-
-
-tinyArraySize : Int
-tinyArraySize =
-    10
-
-
-smallArraySize : Int
-smallArraySize =
-    100
-
-
-mediumArraySize : Int
-mediumArraySize =
-    5000
 
 
 largeArraySize : Int
@@ -89,50 +74,35 @@ createSuite n =
         sampleArray =
             build n ()
     in
-        [ bench "Build"
-            <| build n
-        , bench "Repeat"
-            <| repeat n
-        , bench "Set"
-            <| set sampleArray
-        , bench "Push"
-            <| push sampleArray
-        , bench "Get"
-            <| get sampleArray
-        , bench "Append"
-            <| append sampleArray sampleArray
-        , bench "Slice from end"
-            <| slice 0 -3 sampleArray
-        , bench "Slice from both"
-            <| slice 3 -3 sampleArray
-        , bench "Fold"
-            <| fold sampleArray
-        , bench "Indexed Map"
-            <| indexedMap sampleArray
-        , bench "Indexed List"
-            <| indexedList sampleArray
-        , bench "Equality"
-            <| equality sampleArray (Array.set 5 5 sampleArray)
-        , bench "Equality fail"
-            <| equality sampleArray (Array.set 5 7 sampleArray)
-        , bench "Equality worst case"
-            <| equality sampleArray (Array.foldl (\v acc -> Array.push v acc) Array.empty sampleArray)
+        [ bench "Build" <|
+            build n
+        , bench "Repeat" <|
+            repeat n
+        , bench "Set" <|
+            set sampleArray
+        , bench "Push" <|
+            push sampleArray
+        , bench "Get" <|
+            get sampleArray
+        , bench "Append" <|
+            append sampleArray sampleArray
+        , bench "Slice from end" <|
+            slice 0 -3 sampleArray
+        , bench "Slice from both" <|
+            slice 3 -3 sampleArray
+        , bench "Fold" <|
+            fold sampleArray
+        , bench "Indexed Map" <|
+            indexedMap sampleArray
+        , bench "Indexed List" <|
+            indexedList sampleArray
+        , bench "Equality" <|
+            equality sampleArray (Array.set 5 5 sampleArray)
+        , bench "Equality fail" <|
+            equality sampleArray (Array.set 5 7 sampleArray)
+        , bench "Equality worst case" <|
+            equality sampleArray (Array.foldl (\v acc -> Array.push v acc) Array.empty sampleArray)
         ]
-
-
-tiny : BenchmarkSuite
-tiny =
-    suite "Tiny Array" <| createSuite tinyArraySize
-
-
-small : BenchmarkSuite
-small =
-    suite "Small Array" <| createSuite smallArraySize
-
-
-medium : BenchmarkSuite
-medium =
-    suite "Medium Array" <| createSuite mediumArraySize
 
 
 large : BenchmarkSuite

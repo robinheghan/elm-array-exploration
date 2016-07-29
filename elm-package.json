@@ -1,20 +1,16 @@
 {
-    "version": "3.0.0",
-    "summary": "Stable Array, Dict and Set implementations for Elm.",
-    "repository": "https://github.com/Skinney/collections-ng.git",
+    "version": "1.0.0",
+    "summary": "New Array implementation for Elm.",
+    "repository": "https://github.com/Skinney/elm-array-exploration.git",
     "license": "BSD3",
     "native-modues": true,
     "source-directories": [
         "src"
     ],
     "exposed-modules": [
-        "CollectionsNg.Array",
-        "CollectionsNg.Dict",
-        "CollectionsNg.Set"
+        "Hamt.Array"
     ],
     "dependencies": {
-        "Skinney/fnv": "1.0.0 <= v < 2.0.0",
-        "elm-community/list-extra": "2.0.0 <= v < 3.0.0",
         "elm-lang/core": "4.0.0 <= v < 5.0.0"
     },
     "elm-version": "0.17.0 <= v < 0.18.0"

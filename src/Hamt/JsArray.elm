@@ -1,4 +1,4 @@
-module CollectionsNg.JsArray
+module Hamt.JsArray
     exposing
         ( JsArray
         , empty
