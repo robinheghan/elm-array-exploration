@@ -113,7 +113,7 @@ initialize stop f =
         empty
     else
         let
-            initialize' at f acc =
+            initialize' at acc =
                 let
                     rem =
                         stop - at
@@ -124,9 +124,9 @@ initialize stop f =
                     if rem <= 32 then
                         pushTree stop (CoreArray.initialize rem helper) acc
                     else
-                        initialize' (at + 32) f (pushTree 32 (CoreArray.initialize 32 helper) acc)
+                        initialize' (at + 32) (pushTree 32 (CoreArray.initialize 32 helper) acc)
         in
-            initialize' 0 f empty
+            initialize' 0 empty
 
 
 {-| Creates an array with a given length, filled with a default element.
@@ -417,7 +417,16 @@ filter f arr =
 -}
 map : (a -> b) -> Array a -> Array b
 map f arr =
-    foldl (\n acc -> push (f n) acc) empty arr
+    let
+        helper idx =
+            case get idx arr of
+                Just x ->
+                    f x
+
+                Nothing ->
+                    Debug.crash crashMsg
+    in
+        initialize (length arr) helper
 
 
 {-| Apply a function on every element with its index as first argument.
@@ -427,10 +436,15 @@ map f arr =
 indexedMap : (Int -> a -> b) -> Array a -> Array b
 indexedMap f arr =
     let
-        foldl' i ( idx, acc ) =
-            ( idx + 1, push (f idx i) acc )
+        helper idx =
+            case get idx arr of
+                Just x ->
+                    f idx x
+
+                Nothing ->
+                    Debug.crash crashMsg
     in
-        snd <| foldl foldl' ( 0, empty ) arr
+        initialize (length arr) helper
 
 
 {-| Get a sub-section of an array: `(slice start end array)`. The `start` is a
