@@ -13,14 +13,14 @@ largeArraySize =
     10000
 
 
-repeat : Int -> () -> Input
-repeat n =
-    \() -> Array.repeat n 5
+buildByPush : Int -> () -> Input
+buildByPush n =
+    \() -> List.foldl Array.push Array.empty [1..n]
 
 
-build : Int -> () -> Input
-build n =
-    \() -> List.foldl (\i acc -> Array.push i acc) Array.empty [1..n]
+buildByInitialize : Int -> () -> Input
+buildByInitialize n =
+    \() -> Array.initialize n identity
 
 
 set : Input -> () -> Input
@@ -53,6 +53,11 @@ fold arr =
     \() -> Array.foldl (\_ acc -> acc + 1) 0 arr
 
 
+map : Input -> () -> Array.Array Int
+map arr =
+    \() -> Array.map identity arr
+
+
 indexedMap : Input -> () -> Array.Array ( Int, Int )
 indexedMap arr =
     \() -> Array.indexedMap (,) arr
@@ -72,12 +77,12 @@ createSuite : Int -> List Benchmark
 createSuite n =
     let
         sampleArray =
-            build n ()
+            buildByPush n ()
     in
-        [ bench "Build" <|
-            build n
-        , bench "Repeat" <|
-            repeat n
+        [ bench "Build by push" <|
+            buildByPush n
+        , bench "Build by initialize" <|
+            buildByInitialize n
         , bench "Set" <|
             set sampleArray
         , bench "Push" <|
@@ -92,6 +97,8 @@ createSuite n =
             slice 3 -3 sampleArray
         , bench "Fold" <|
             fold sampleArray
+        , bench "Map" <|
+            map sampleArray
         , bench "Indexed Map" <|
             indexedMap sampleArray
         , bench "Indexed List" <|
