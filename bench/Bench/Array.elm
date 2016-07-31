@@ -91,10 +91,18 @@ createSuite n =
             get sampleArray
         , bench "Append" <|
             append sampleArray sampleArray
-        , bench "Slice from end" <|
+        , bench "Slice from beginning minor" <|
+            slice 3 n sampleArray
+        , bench "Slice from beginning mayor" <|
+            slice (n // 2) n sampleArray
+        , bench "Slice from end minor" <|
             slice 0 -3 sampleArray
-        , bench "Slice from both" <|
+        , bench "Slice from end mayor" <|
+            slice 0 (n // 2) sampleArray
+        , bench "Slice from both minor" <|
             slice 3 -3 sampleArray
+        , bench "Slice from both mayor" <|
+            slice ((n // 2) - 10) (n // 2) sampleArray
         , bench "Fold" <|
             fold sampleArray
         , bench "Map" <|
