@@ -11,9 +11,11 @@ tests =
         [ init'
         , isEmpty'
         , length'
+        , equality
         , getSet
         , conversion
         , transform
+        , slice'
         , runtimeCrash
         ]
 
@@ -92,10 +94,6 @@ length' =
             \() ->
                 length (push 3 (fromList [ 1, 2 ]))
                     |> Expect.equal 3
-        , test "pop" <|
-            \() ->
-                length (slice 0 -1 (fromList [ 1, 2, 3 ]))
-                    |> Expect.equal 2
         , test "append" <|
             \() ->
                 length (append (fromList [ 1, 2 ]) (fromList [ 3, 4, 5 ]))
@@ -104,6 +102,28 @@ length' =
             \() ->
                 length (set 1 1 (fromList [ 1, 2, 3 ]))
                     |> Expect.equal 3
+        , test "slice" <|
+            \() ->
+                length (slice 35 -35 (fromList [0..1063]))
+                    |> Expect.equal 994
+        ]
+
+
+equality : Test
+equality =
+    describe "Equality"
+        [ test "don't matter how you build" <|
+            \() ->
+                initialize 5 identity
+                    |> Expect.equal (List.foldl push empty [0..4])
+        , test "small slice" <|
+            \() ->
+                slice 3 -3 (fromList [0..1063])
+                    |> Expect.equal (fromList [3..1060])
+        , test "large slice" <|
+            \() ->
+                slice 35 -35 (fromList [0..1063])
+                    |> Expect.equal (fromList [35..1028])
         ]
 
 
@@ -190,31 +210,71 @@ transform =
             \() ->
                 toList (append (fromList [1..60]) (fromList [61..120]))
                     |> Expect.equal [1..120]
-        , test "slice" <|
-            \() ->
-                toList (slice 2 5 (fromList [1..8]))
-                    |> Expect.equal [3..5]
-        , test "start slice" <|
-            \() ->
-                let
-                    arr =
-                        fromList [1..10]
-                in
-                    toList (slice 2 (length arr) arr)
-                        |> Expect.equal [3..10]
-        , test "negative slice" <|
-            \() ->
-                toList (slice -5 -2 (fromList [1..8]))
-                    |> Expect.equal [4..6]
-        , test "combined slice" <|
-            \() ->
-                toList (slice 2 -2 (fromList [1..8]))
-                    |> Expect.equal [3..6]
-        , test "impossible slice" <|
-            \() ->
-                toList (slice 6 -2 (fromList [1..8]))
-                    |> Expect.equal []
         ]
+
+
+slice' : Test
+slice' =
+    let
+        smallSample =
+            fromList [1..8]
+
+        largeSample =
+            fromList [0..1063]
+
+        largeLen =
+            1064
+    in
+        describe "Slice"
+            [ test "both small" <|
+                \() ->
+                    toList (slice 2 5 smallSample)
+                        |> Expect.equal [3..5]
+            , test "start small" <|
+                \() ->
+                    let
+                        arr =
+                            fromList [1..10]
+                    in
+                        toList (slice 2 (length arr) arr)
+                            |> Expect.equal [3..10]
+            , test "negative" <|
+                \() ->
+                    toList (slice -5 -2 smallSample)
+                        |> Expect.equal [4..6]
+            , test "combined" <|
+                \() ->
+                    toList (slice 2 -2 smallSample)
+                        |> Expect.equal [3..6]
+            , test "impossible" <|
+                \() ->
+                    toList (slice -1 -2 smallSample)
+                        |> Expect.equal []
+            , test "start mayor" <|
+                \() ->
+                    toList (slice (largeLen // 2) largeLen largeSample)
+                        |> Expect.equal [532..1063]
+            , test "end mayor" <|
+                \() ->
+                    toList (slice 0 (largeLen // 2) largeSample)
+                        |> Expect.equal [0..531]
+            , test "both mayor" <|
+                \() ->
+                    toList (slice (largeLen // 2) (largeLen // 2 + 10) largeSample)
+                        |> Expect.equal [532..541]
+            , test "start minor" <|
+                \() ->
+                    toList (slice 3 largeLen largeSample)
+                        |> Expect.equal [3..1063]
+            , test "end minor" <|
+                \() ->
+                    toList (slice 0 -3 largeSample)
+                        |> Expect.equal [0..1060]
+            , test "both minor" <|
+                \() ->
+                    toList (slice 3 -3 largeSample)
+                        |> Expect.equal [3..1060]
+            ]
 
 
 runtimeCrash : Test
