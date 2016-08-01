@@ -10,6 +10,7 @@ module Hamt.JsArray
         , push
         , foldl
         , foldr
+        , slice
         )
 
 import Native.JsArray
@@ -62,3 +63,8 @@ foldl =
 foldr : (a -> b -> b) -> b -> JsArray a -> b
 foldr =
     Native.JsArray.foldr
+
+
+slice : Int -> Int -> JsArray a -> JsArray a
+slice =
+    Native.JsArray.slice

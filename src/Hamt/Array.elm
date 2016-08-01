@@ -254,8 +254,8 @@ tailPrefix len =
 
 
 indexShift : Int -> Int -> Int
-indexShift shift hash =
-    Bitwise.and 0x1F <| Bitwise.shiftRightLogical hash shift
+indexShift shift idx =
+    Bitwise.and 0x1F <| Bitwise.shiftRightLogical idx shift
 
 
 {-| Return Just the element at the index or Nothing if the index is out of range.
@@ -267,7 +267,7 @@ indexShift shift hash =
 -}
 get : Int -> Array a -> Maybe a
 get idx arr =
-    if idx >= (tailPrefix arr.length) then
+    if idx >= tailPrefix arr.length then
         case CoreArray.get (idx `Bitwise.and` 0x1F) arr.tail of
             Just x ->
                 case x of
@@ -472,17 +472,10 @@ slice from to arr =
         correctTo =
             translateIndex to arr
     in
-        if isEmpty arr || correctFrom > correctTo then
+        if correctFrom > correctTo then
             empty
         else
-            let
-                foldl' i ( idx, acc ) =
-                    if idx >= correctFrom && idx < correctTo then
-                        ( idx + 1, push i acc )
-                    else
-                        ( idx + 1, acc )
-            in
-                snd <| foldl foldl' ( 0, empty ) arr
+            sliceLeft correctFrom (sliceRight correctTo arr)
 
 
 translateIndex : Int -> Array a -> Int
@@ -500,3 +493,78 @@ translateIndex idx arr =
             arr.length
         else
             posIndex
+
+
+sliceRight : Int -> Array a -> Array a
+sliceRight end arr =
+    if end == length arr then
+        arr
+    else if end >= tailPrefix arr.length then
+        { arr
+            | length = end
+            , tail = CoreArray.slice 0 (end `Bitwise.and` 0x1F) arr.tail
+        }
+    else
+        let
+            endIdx =
+                tailPrefix end
+
+            fetchNewTail shift tree =
+                case CoreArray.get (indexShift shift endIdx) tree of
+                    Just x ->
+                        case x of
+                            Value _ ->
+                                CoreArray.slice 0 (end `Bitwise.and` 0x1F) tree
+
+                            SubTree sub ->
+                                fetchNewTail (shift - 5) sub
+
+                    Nothing ->
+                        Debug.crash crashMsg
+
+            sliceTree shift tree =
+                let
+                    lastPos =
+                        indexShift shift endIdx
+                in
+                    case CoreArray.get lastPos tree of
+                        Just x ->
+                            case x of
+                                Value _ ->
+                                    CoreArray.empty
+
+                                SubTree sub ->
+                                    let
+                                        newSub =
+                                            sliceTree (shift - 5) sub
+                                    in
+                                        if CoreArray.length newSub == 0 then
+                                            CoreArray.slice 0 lastPos tree
+                                        else
+                                            tree
+                                                |> CoreArray.slice 0 (lastPos + 1)
+                                                |> CoreArray.set lastPos (SubTree newSub)
+
+                        Nothing ->
+                            Debug.crash crashMsg
+        in
+            { length = end
+            , startShift = calcStartShift end
+            , tail = fetchNewTail arr.startShift arr.tree
+            , tree = sliceTree arr.startShift arr.tree
+            }
+
+
+sliceLeft : Int -> Array a -> Array a
+sliceLeft start arr =
+    if start == 0 then
+        arr
+    else
+        let
+            foldl' i ( idx, acc ) =
+                if idx >= start then
+                    ( idx + 1, push i acc )
+                else
+                    ( idx + 1, acc )
+        in
+            snd <| foldl foldl' ( 0, empty ) arr

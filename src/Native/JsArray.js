@@ -56,6 +56,7 @@ function set(idx, val, arr) {
 function push(val, arr) {
     var copy = arr._0.slice();
     copy.push(val);
+
     return {
         ctor: 'JsArray',
         _0: copy
@@ -83,6 +84,13 @@ function foldr(f, init, arr) {
     return a;
 }
 
+function slice(from, to, arr) {
+    return {
+        ctor: 'JsArray',
+        _0: arr._0.slice(from, to)
+    };
+}
+
 return {
     empty: empty,
     singleton: singleton,
@@ -92,7 +100,8 @@ return {
     set: F3(set),
     push: F2(push),
     foldl: F3(foldl),
-    foldr: F3(foldr)
+    foldr: F3(foldr),
+    slice: F3(slice)
 };
 
 }();
