@@ -426,7 +426,7 @@ map f arr =
                 Nothing ->
                     Debug.crash crashMsg
     in
-        initialize (length arr) helper
+        initialize arr.length helper
 
 
 {-| Apply a function on every element with its index as first argument.
@@ -444,7 +444,7 @@ indexedMap f arr =
                 Nothing ->
                     Debug.crash crashMsg
     in
-        initialize (length arr) helper
+        initialize arr.length helper
 
 
 {-| Get a sub-section of an array: `(slice start end array)`. The `start` is a
@@ -497,7 +497,7 @@ translateIndex idx arr =
 
 sliceRight : Int -> Array a -> Array a
 sliceRight end arr =
-    if end == length arr then
+    if end == arr.length then
         arr
     else if end >= tailPrefix arr.length then
         { arr
