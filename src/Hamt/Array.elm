@@ -122,7 +122,7 @@ initialize stop f =
                         Value (f (at + idx))
                 in
                     if rem <= 32 then
-                        pushTree stop (CoreArray.initialize rem helper) acc
+                        pushTree rem (CoreArray.initialize rem helper) acc
                     else
                         initialize' (at + 32) (pushTree 32 (CoreArray.initialize 32 helper) acc)
         in

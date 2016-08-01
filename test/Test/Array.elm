@@ -114,6 +114,10 @@ length' =
             \() ->
                 length (slice 0 -35 (fromList [0..69]))
                     |> Expect.equal 35
+        , test "initialize" <|
+            \() ->
+                length (initialize 40 identity)
+                    |> Expect.equal 40
         ]
 
 
@@ -288,21 +292,19 @@ slice' =
 runtimeCrash : Test
 runtimeCrash =
     describe "Runtime crashes in core"
-        [ {- test "magic slice" <|
-              \() ->
-                  let
-                      n =
-                          10
-                  in
-                      initialize (4 * n) identity
-                          |> slice n (4 * n)
-                          |> slice n (3 * n)
-                          |> slice n (2 * n)
-                          |> slice n n
-                          |> \a -> Expect.equal a a
-             ,
-          -}
-          test "magic slice 2" <|
+        [ test "magic slice" <|
+            \() ->
+                let
+                    n =
+                        10
+                in
+                    initialize (4 * n) identity
+                        |> slice n (4 * n)
+                        |> slice n (3 * n)
+                        |> slice n (2 * n)
+                        |> slice n n
+                        |> \a -> Expect.equal a a
+        , test "magic slice 2" <|
             \() ->
                 let
                     ary =
