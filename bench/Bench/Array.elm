@@ -122,4 +122,9 @@ createSuite n =
 
 large : BenchmarkSuite
 large =
-    suite "Large Array" <| createSuite largeArraySize
+    suite
+        ("Array ("
+            ++ (toString largeArraySize)
+            ++ " elements)"
+        )
+        (createSuite largeArraySize)

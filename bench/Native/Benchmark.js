@@ -25,11 +25,11 @@ var _user$project$Native_Benchmark = (function () {
 
         for (i = 0; i < suites.length; i++) {
             suites[i].on('start', function () {
-                console.log('Starting ' + this.name + ' suite.');
+                console.log('Benchmarking ' + this.name + '.');
             }).on('cycle', function (event) {
                 console.log(String(event.target));
             }).on('complete', function () {
-                console.log('Done with ' + this.name + ' suite.');
+                console.log('Done.');
             }).run();
         }
 
