@@ -44,7 +44,7 @@ same type.
 -}
 
 import Bitwise
-import Hamt.JsArray as CoreArray
+import Hamt.JsArray as JsArray exposing (JsArray)
 
 
 {-| Representation of fast immutable arrays. You can create arrays of integers
@@ -60,7 +60,7 @@ type alias Array a =
 
 
 type alias Tree a =
-    CoreArray.JsArray (Node a)
+    JsArray (Node a)
 
 
 type Node a
@@ -79,7 +79,7 @@ crashMsg =
 -}
 empty : Array a
 empty =
-    Array 0 5 CoreArray.empty CoreArray.empty
+    Array 0 5 JsArray.empty JsArray.empty
 
 
 {-| Determine if an array is empty.
@@ -122,9 +122,9 @@ initialize stop f =
                         Value (f (at + idx))
                 in
                     if rem <= 32 then
-                        pushTree rem (CoreArray.initialize rem helper) acc
+                        pushTree rem (JsArray.initialize rem helper) acc
                     else
-                        initialize' (at + 32) (pushTree 32 (CoreArray.initialize 32 helper) acc)
+                        initialize' (at + 32) (pushTree 32 (JsArray.initialize 32 helper) acc)
         in
             initialize' 0 empty
 
@@ -177,7 +177,7 @@ toIndexedList arr =
 -}
 push : a -> Array a -> Array a
 push a arr =
-    pushTree 1 (CoreArray.push (Value a) arr.tail) arr
+    pushTree 1 (JsArray.push (Value a) arr.tail) arr
 
 
 pushTree : Int -> Tree a -> Array a -> Array a
@@ -190,7 +190,7 @@ pushTree mod newTail arr =
             calcStartShift newLen
 
         tailLen =
-            CoreArray.length newTail
+            JsArray.length newTail
 
         newTree =
             if tailLen == 32 then
@@ -202,12 +202,12 @@ pushTree mod newTail arr =
         , startShift = newShift
         , tree =
             if newShift > arr.startShift then
-                CoreArray.singleton (SubTree newTree)
+                JsArray.singleton (SubTree newTree)
             else
                 newTree
         , tail =
             if tailLen == 32 then
-                CoreArray.empty
+                JsArray.empty
             else
                 newTail
         }
@@ -219,7 +219,7 @@ tailPush shift idx tail tree =
         pos =
             indexShift shift idx
     in
-        case CoreArray.get pos tree of
+        case JsArray.get pos tree of
             Just x ->
                 case x of
                     SubTree subTree ->
@@ -227,14 +227,14 @@ tailPush shift idx tail tree =
                             newSub =
                                 tailPush (shift - 5) idx tail subTree
                         in
-                            CoreArray.set pos (SubTree newSub) tree
+                            JsArray.set pos (SubTree newSub) tree
 
                     Value _ ->
-                        CoreArray.singleton (SubTree tree)
+                        JsArray.singleton (SubTree tree)
                             |> tailPush shift idx tail
 
             Nothing ->
-                CoreArray.push (SubTree tail) tree
+                JsArray.push (SubTree tail) tree
 
 
 calcStartShift : Int -> Int
@@ -268,7 +268,7 @@ indexShift shift idx =
 get : Int -> Array a -> Maybe a
 get idx arr =
     if idx >= tailPrefix arr.length then
-        case CoreArray.get (idx `Bitwise.and` 0x1F) arr.tail of
+        case JsArray.get (idx `Bitwise.and` 0x1F) arr.tail of
             Just x ->
                 case x of
                     Value v ->
@@ -289,7 +289,7 @@ getRecursive shift idx tree =
         pos =
             indexShift shift idx
     in
-        case CoreArray.get pos tree of
+        case JsArray.get pos tree of
             Just x ->
                 case x of
                     Value v ->
@@ -315,7 +315,7 @@ set idx val arr =
         { length = arr.length
         , startShift = arr.startShift
         , tree = arr.tree
-        , tail = CoreArray.set (idx `Bitwise.and` 0x1F) (Value val) arr.tail
+        , tail = JsArray.set (idx `Bitwise.and` 0x1F) (Value val) arr.tail
         }
     else
         { length = arr.length
@@ -331,11 +331,11 @@ setRecursive shift idx val tree =
         pos =
             indexShift shift idx
     in
-        case CoreArray.get pos tree of
+        case JsArray.get pos tree of
             Just x ->
                 case x of
                     Value _ ->
-                        CoreArray.set pos (Value val) tree
+                        JsArray.set pos (Value val) tree
 
                     SubTree subTree ->
                         setRecursive (shift - 5) idx val subTree
@@ -357,12 +357,12 @@ foldr f init arr =
                     f v acc
 
                 SubTree subTree ->
-                    CoreArray.foldr foldr' acc subTree
+                    JsArray.foldr foldr' acc subTree
 
         tail =
-            CoreArray.foldr foldr' init arr.tail
+            JsArray.foldr foldr' init arr.tail
     in
-        CoreArray.foldr foldr' tail arr.tree
+        JsArray.foldr foldr' tail arr.tree
 
 
 {-| Reduce an array from the left. Read `foldl` as fold from the left.
@@ -378,12 +378,12 @@ foldl f init arr =
                     f v acc
 
                 SubTree subTree ->
-                    CoreArray.foldl foldl' acc subTree
+                    JsArray.foldl foldl' acc subTree
 
         tree =
-            CoreArray.foldl foldl' init arr.tree
+            JsArray.foldl foldl' init arr.tree
     in
-        CoreArray.foldl foldl' tree arr.tail
+        JsArray.foldl foldl' tree arr.tail
 
 
 {-| Append two arrays to a new one.
@@ -502,7 +502,7 @@ sliceRight end arr =
     else if end >= tailPrefix arr.length then
         { arr
             | length = end
-            , tail = CoreArray.slice 0 (end `Bitwise.and` 0x1F) arr.tail
+            , tail = JsArray.slice 0 (end `Bitwise.and` 0x1F) arr.tail
         }
     else
         let
@@ -510,11 +510,11 @@ sliceRight end arr =
                 tailPrefix end
 
             fetchNewTail shift tree =
-                case CoreArray.get (indexShift shift endIdx) tree of
+                case JsArray.get (indexShift shift endIdx) tree of
                     Just x ->
                         case x of
                             Value _ ->
-                                CoreArray.slice 0 (end `Bitwise.and` 0x1F) tree
+                                JsArray.slice 0 (end `Bitwise.and` 0x1F) tree
 
                             SubTree sub ->
                                 fetchNewTail (shift - 5) sub
@@ -527,23 +527,23 @@ sliceRight end arr =
                     lastPos =
                         indexShift shift endIdx
                 in
-                    case CoreArray.get lastPos tree of
+                    case JsArray.get lastPos tree of
                         Just x ->
                             case x of
                                 Value _ ->
-                                    CoreArray.empty
+                                    JsArray.empty
 
                                 SubTree sub ->
                                     let
                                         newSub =
                                             sliceTree (shift - 5) sub
                                     in
-                                        if CoreArray.length newSub == 0 then
-                                            CoreArray.slice 0 lastPos tree
+                                        if JsArray.length newSub == 0 then
+                                            JsArray.slice 0 lastPos tree
                                         else
                                             tree
-                                                |> CoreArray.slice 0 (lastPos + 1)
-                                                |> CoreArray.set lastPos (SubTree newSub)
+                                                |> JsArray.slice 0 (lastPos + 1)
+                                                |> JsArray.set lastPos (SubTree newSub)
 
                         Nothing ->
                             Debug.crash crashMsg
