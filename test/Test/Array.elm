@@ -150,6 +150,14 @@ getSet =
             \() ->
                 get 45 (fromList [0..65])
                     |> Expect.equal (Just 45)
+        , test "can retrieve from tail" <|
+            \() ->
+                get 1026 (fromList [0..1030])
+                    |> Expect.equal (Just 1026)
+        , test "can retrieve from tree" <|
+            \() ->
+                get 1022 (fromList [0..1030])
+                    |> Expect.equal (Just 1022)
         , test "out of bounds retrieval returns nothing" <|
             \() ->
                 get 1 (fromList [ 1 ])
@@ -166,14 +174,6 @@ getSet =
             \() ->
                 set 3 5 (fromList [ 1, 2, 3 ])
                     |> Expect.equal (fromList [ 1, 2, 3 ])
-        , test "can retrieve from tail" <|
-            \() ->
-                get 1026 (fromList [0..1030])
-                    |> Expect.equal (Just 1026)
-        , test "can retrieve from tree" <|
-            \() ->
-                get 1022 (fromList [0..1030])
-                    |> Expect.equal (Just 1022)
         ]
 
 
@@ -290,6 +290,18 @@ slice' =
                 \() ->
                     toList (slice 3 -3 largeSample)
                         |> Expect.equal [3..1060]
+            , test "past threshold left" <|
+                \() ->
+                    slice 60 largeLen largeSample
+                        |> Expect.equal (fromList [60..(largeLen - 1)])
+            , test "past threshold right" <|
+                \() ->
+                    slice 0 -60 largeSample
+                        |> Expect.equal (fromList [0..(largeLen - 61)])
+            , test "reduce to single element" <|
+                \() ->
+                    slice 0 1 largeSample
+                        |> Expect.equal (fromList [ 0 ])
             ]
 
 

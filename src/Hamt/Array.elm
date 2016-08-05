@@ -541,21 +541,37 @@ sliceRight end arr =
                                     let
                                         newSub =
                                             sliceTree (shift - 5) sub
+
+                                        newTree =
+                                            if JsArray.length newSub == 0 then
+                                                JsArray.slice 0 lastPos tree
+                                            else
+                                                tree
+                                                    |> JsArray.slice 0 (lastPos + 1)
+                                                    |> JsArray.set lastPos (SubTree newSub)
                                     in
-                                        if JsArray.length newSub == 0 then
-                                            JsArray.slice 0 lastPos tree
+                                        if JsArray.length newTree == 1 then
+                                            case JsArray.get 0 newTree of
+                                                Just x ->
+                                                    case x of
+                                                        SubTree y ->
+                                                            y
+
+                                                        Value _ ->
+                                                            Debug.crash crashMsg
+
+                                                Nothing ->
+                                                    Debug.crash crashMsg
                                         else
-                                            tree
-                                                |> JsArray.slice 0 (lastPos + 1)
-                                                |> JsArray.set lastPos (SubTree newSub)
+                                            newTree
 
                         Nothing ->
                             Debug.crash crashMsg
         in
             { length = end
             , startShift = calcStartShift end
-            , tail = fetchNewTail arr.startShift arr.tree
             , tree = sliceTree arr.startShift arr.tree
+            , tail = fetchNewTail arr.startShift arr.tree
             }
 
 
