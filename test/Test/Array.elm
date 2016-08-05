@@ -43,9 +43,13 @@ init' =
             \() ->
                 toList (repeat 3 0)
                     |> Expect.equal [ 0, 0, 0 ]
-        , test "Large build" <|
+        , test "Large initialize" <|
             \() ->
                 toList (initialize 40000 identity)
+                    |> Expect.equal [0..39999]
+        , test "Large push" <|
+            \() ->
+                toList (List.foldl push empty [0..39999])
                     |> Expect.equal [0..39999]
         ]
 
@@ -148,8 +152,8 @@ getSet =
                     |> Expect.equal (Just 2)
         , test "can retrieve element in large array" <|
             \() ->
-                get 45 (fromList [0..65])
-                    |> Expect.equal (Just 45)
+                get 1100 (fromList [0..1200])
+                    |> Expect.equal (Just 1100)
         , test "can retrieve from tail" <|
             \() ->
                 get 1026 (fromList [0..1030])
