@@ -338,7 +338,11 @@ setRecursive shift idx val tree =
                         JsArray.set pos (Value val) tree
 
                     SubTree subTree ->
-                        setRecursive (shift - 5) idx val subTree
+                        let
+                            newSub =
+                                setRecursive (shift - 5) idx val subTree
+                        in
+                            JsArray.set pos (SubTree newSub) tree
 
             Nothing ->
                 Debug.crash crashMsg

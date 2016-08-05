@@ -158,6 +158,10 @@ getSet =
             \() ->
                 set 1 5 (fromList [ 1, 2, 3 ])
                     |> Expect.equal (fromList [ 1, 5, 3 ])
+        , test "set works on large arrays" <|
+            \() ->
+                get 50 (set 50 5 (fromList [0..1025]))
+                    |> Expect.equal (Just 5)
         , test "set out of bounds returns original array" <|
             \() ->
                 set 3 5 (fromList [ 1, 2, 3 ])
