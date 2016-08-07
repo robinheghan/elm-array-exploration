@@ -111,22 +111,75 @@ initialize : Int -> (Int -> a) -> Array a
 initialize stop f =
     if stop <= 0 then
         empty
+    else if stop < 32 then
+        { length = stop
+        , startShift = 5
+        , tree = JsArray.empty
+        , tail = JsArray.initialize stop f
+        }
     else
         let
-            initialize' at acc =
-                let
-                    rem =
-                        stop - at
+            tailLen =
+                stop `Bitwise.and` 0x1F
 
-                    helper idx =
-                        f (at + idx)
-                in
-                    if rem <= 32 then
-                        pushTree rem (JsArray.initialize rem helper) acc
-                    else
-                        initialize' (at + 32) (pushTree 32 (JsArray.initialize 32 helper) acc)
+            treeLen =
+                stop - tailLen
+
+            requiredTreeHeight =
+                (treeLen |> toFloat |> logBase 32 |> floor)
+
+            subTreeSize =
+                32 ^ requiredTreeHeight
+
+            numberOfSubTrees =
+                ceiling ((toFloat treeLen) / (toFloat subTreeSize))
         in
-            initialize' 0 empty
+            { length = stop
+            , startShift = requiredTreeHeight * 5
+            , tree =
+                JsArray.initialize
+                    numberOfSubTrees
+                    (\idx ->
+                        let
+                            startIndex =
+                                subTreeSize * idx
+                        in
+                            initializeTree startIndex (min (startIndex + subTreeSize) treeLen) f
+                    )
+            , tail =
+                JsArray.initialize
+                    tailLen
+                    (\idx -> f (treeLen + idx))
+            }
+
+
+initializeTree : Int -> Int -> (Int -> a) -> Node a
+initializeTree startIndex stopIndex f =
+    let
+        len =
+            stopIndex - startIndex
+    in
+        if len == 32 then
+            Leaf <| JsArray.initialize 32 (\idx -> f (startIndex + idx))
+        else
+            let
+                requiredTreeHeight =
+                    ((len - 1) |> toFloat |> logBase 32 |> floor)
+
+                subTreeSize =
+                    32 ^ requiredTreeHeight
+
+                numberOfSubTrees =
+                    ceiling ((toFloat len) / (toFloat subTreeSize))
+
+                helper idx =
+                    let
+                        start =
+                            startIndex + (subTreeSize * idx)
+                    in
+                        initializeTree start (min (start + subTreeSize) stopIndex) f
+            in
+                SubTree <| JsArray.initialize numberOfSubTrees helper
 
 
 {-| Creates an array with a given length, filled with a default element.
