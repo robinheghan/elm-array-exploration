@@ -207,7 +207,7 @@ fromList ls =
 -}
 toList : Array a -> List a
 toList arr =
-    foldr (\n acc -> n :: acc) [] arr
+    foldr (::) [] arr
 
 
 {-| Create an indexed list from an array. Each element of the array will be
