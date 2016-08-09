@@ -1,7 +1,7 @@
 module Tests exposing (all)
 
 import Test exposing (Test, describe, test, fuzz, fuzz2)
-import Fuzz exposing (intRange)
+import Fuzz exposing (Fuzzer, intRange)
 import Expect
 import Hamt.Array exposing (..)
 
@@ -21,13 +21,24 @@ all =
         ]
 
 
+{-| > 33000 elements requires 3 levels in the tree
+-}
+defaultSizeRange : Fuzzer Int
+defaultSizeRange =
+    (intRange 1 35000)
+
+
 init' : Test
 init' =
     describe "Initialization"
-        [ fuzz (intRange 1 10000) "initialize" <|
+        [ fuzz defaultSizeRange "initialize" <|
             \size ->
                 toList (initialize size identity)
                     |> Expect.equal [0..(size - 1)]
+        , fuzz defaultSizeRange "push" <|
+            \size ->
+                List.foldl push empty [0..(size - 1)]
+                    |> Expect.equal (initialize size identity)
         , test "initialize non-identity" <|
             \() ->
                 toList (initialize 4 (\n -> n * n))
@@ -40,14 +51,6 @@ init' =
             \() ->
                 toList (initialize -2 identity)
                     |> Expect.equal []
-        , test "Large initialize" <|
-            \() ->
-                toList (initialize 40000 identity)
-                    |> Expect.equal [0..39999]
-        , test "Large push" <|
-            \() ->
-                toList (List.foldl push empty [0..39999])
-                    |> Expect.equal [0..39999]
         ]
 
 
@@ -79,19 +82,19 @@ length' =
             \() ->
                 length empty
                     |> Expect.equal 0
-        , fuzz (intRange 1 10000) "non-empty array" <|
+        , fuzz defaultSizeRange "non-empty array" <|
             \size ->
                 length (initialize size identity)
                     |> Expect.equal size
-        , fuzz (intRange 1 10000) "push" <|
+        , fuzz defaultSizeRange "push" <|
             \size ->
                 length (push size (initialize size identity))
                     |> Expect.equal (size + 1)
-        , fuzz (intRange 1 1000) "append" <|
+        , fuzz defaultSizeRange "append" <|
             \size ->
                 length (append (initialize size identity) (initialize (size // 2) identity))
                     |> Expect.equal (size + (size // 2))
-        , fuzz (intRange 1 10000) "set does not increase" <|
+        , fuzz defaultSizeRange "set does not increase" <|
             \size ->
                 length (set (size // 2) 1 (initialize size identity))
                     |> Expect.equal size
@@ -109,11 +112,7 @@ length' =
 equality : Test
 equality =
     describe "Equality"
-        [ fuzz (intRange 1 10000) "don't matter how you build" <|
-            \size ->
-                initialize size identity
-                    |> Expect.equal (List.foldl push empty [0..(size - 1)])
-        , fuzz2 (intRange -35 0) (intRange 100 35000) "slice" <|
+        [ fuzz2 (intRange -35 0) (intRange 100 35000) "slice" <|
             \n size ->
                 slice (abs n) n (initialize size identity)
                     |> Expect.equal (initialize (size + n + n) (\idx -> idx - n))
@@ -123,7 +122,7 @@ equality =
 getSet : Test
 getSet =
     describe "Get and set"
-        [ fuzz2 (intRange 1 35000) (intRange 1 35000) "can retrieve element" <|
+        [ fuzz2 defaultSizeRange defaultSizeRange "can retrieve element" <|
             \x y ->
                 let
                     n =
@@ -134,11 +133,17 @@ getSet =
                 in
                     get n (initialize size identity)
                         |> Expect.equal (Just n)
-        , test "out of bounds retrieval returns nothing" <|
-            \() ->
-                get 1 (fromList [ 1 ])
-                    |> Expect.equal Nothing
-        , fuzz2 (intRange 1 35000) (intRange 1 35000) "set replaces value" <|
+        , fuzz2 (intRange 1 50) (intRange 100 35000) "out of bounds retrieval returns nothing" <|
+            \n size ->
+                let
+                    arr =
+                        initialize size identity
+                in
+                    ( get (negate n) arr
+                    , get (size + n) arr
+                    )
+                        |> Expect.equal ( Nothing, Nothing )
+        , fuzz2 defaultSizeRange defaultSizeRange "set replaces value" <|
             \x y ->
                 let
                     n =
@@ -149,14 +154,14 @@ getSet =
                 in
                     get n (set n 5 (initialize size identity))
                         |> Expect.equal (Just 5)
-        , fuzz (intRange 1 35000) "set out of bounds returns original array" <|
-            \size ->
+        , fuzz2 (intRange 0 50) defaultSizeRange "set out of bounds returns original array" <|
+            \n size ->
                 let
                     arr =
                         initialize size identity
                 in
-                    set -1 5 arr
-                        |> set (size + 1) 5
+                    set (negate n) 5 arr
+                        |> set (size + n) 5
                         |> Expect.equal arr
         ]
 
@@ -164,52 +169,52 @@ getSet =
 conversion : Test
 conversion =
     describe "Conversion"
-        [ test "empty array" <|
-            \() ->
-                toList (fromList [])
-                    |> Expect.equal []
-        , test "correct element" <|
-            \() ->
-                toList (fromList [ 1, 2, 3 ])
-                    |> Expect.equal [ 1, 2, 3 ]
-        , test "indexed" <|
-            \() ->
-                toIndexedList (fromList [ 1, 2, 3 ])
-                    |> Expect.equal [ ( 0, 1 ), ( 1, 2 ), ( 2, 3 ) ]
+        [ fuzz defaultSizeRange "back and forth" <|
+            \size ->
+                let
+                    ls =
+                        [0..(size - 1)]
+                in
+                    toList (fromList ls)
+                        |> Expect.equal ls
+        , fuzz defaultSizeRange "indexed" <|
+            \size ->
+                toIndexedList (initialize size ((+) 1))
+                    |> Expect.equal (toList (initialize size (\idx -> ( idx, idx + 1 ))))
         ]
 
 
 transform : Test
 transform =
     describe "Transform"
-        [ test "foldl" <|
-            \() ->
-                foldl (::) [] (fromList [ 1, 2, 3 ])
-                    |> Expect.equal [ 3, 2, 1 ]
-        , test "foldr" <|
-            \() ->
-                foldr (\n acc -> n :: acc) [] (fromList [ 1, 2, 3 ])
-                    |> Expect.equal [ 1, 2, 3 ]
-        , test "filter" <|
-            \() ->
-                toList (filter (\a -> a % 2 == 0) (fromList [1..6]))
-                    |> Expect.equal [ 2, 4, 6 ]
-        , test "map" <|
-            \() ->
-                toList (map ((+) 1) (fromList [ 1, 2, 3 ]))
-                    |> Expect.equal [ 2, 3, 4 ]
-        , test "indexedMap" <|
-            \() ->
-                toList (indexedMap (*) (fromList [ 5, 5, 5 ]))
-                    |> Expect.equal [ 0, 5, 10 ]
-        , test "push appends one element" <|
-            \() ->
-                toList (push 3 (fromList [ 1, 2 ]))
-                    |> Expect.equal [ 1, 2, 3 ]
-        , test "append" <|
-            \() ->
-                toList (append (fromList [1..60]) (fromList [61..120]))
-                    |> Expect.equal [1..120]
+        [ fuzz defaultSizeRange "foldl" <|
+            \size ->
+                foldl (::) [] (initialize size identity)
+                    |> Expect.equal (List.reverse [0..(size - 1)])
+        , fuzz defaultSizeRange "foldr" <|
+            \size ->
+                foldr (\n acc -> n :: acc) [] (initialize size identity)
+                    |> Expect.equal [0..(size - 1)]
+        , fuzz defaultSizeRange "filter" <|
+            \size ->
+                toList (filter (\a -> a % 2 == 0) (initialize size identity))
+                    |> Expect.equal (List.filter (\a -> a % 2 == 0) [0..(size - 1)])
+        , fuzz defaultSizeRange "map" <|
+            \size ->
+                map ((+) 1) (initialize size identity)
+                    |> Expect.equal (initialize size ((+) 1))
+        , fuzz defaultSizeRange "indexedMap" <|
+            \size ->
+                indexedMap (*) (repeat size 5)
+                    |> Expect.equal (initialize size ((*) 5))
+        , fuzz defaultSizeRange "push appends one element" <|
+            \size ->
+                push size (initialize size identity)
+                    |> Expect.equal (initialize (size + 1) identity)
+        , fuzz (intRange 1 1050) "append" <|
+            \size ->
+                append (initialize size identity) (initialize size (\idx -> idx + size))
+                    |> Expect.equal (initialize (size * 2) identity)
         ]
 
 
