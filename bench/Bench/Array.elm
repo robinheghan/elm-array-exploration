@@ -23,6 +23,11 @@ buildByInitialize n =
     \() -> Array.initialize n identity
 
 
+length : Input -> () -> Int
+length arr =
+    \() -> Array.length arr
+
+
 set : Input -> () -> Input
 set arr =
     \() -> Array.set 7 5 arr
@@ -48,19 +53,39 @@ slice from to arr =
     \() -> Array.slice from to arr
 
 
-fold : Input -> () -> Int
-fold arr =
+foldl : Input -> () -> Int
+foldl arr =
     \() -> Array.foldl (\_ acc -> acc + 1) 0 arr
 
 
-map : Input -> () -> Array.Array Int
+foldr : Input -> () -> Int
+foldr arr =
+    \() -> Array.foldr (\_ acc -> acc + 1) 0 arr
+
+
+map : Input -> () -> Input
 map arr =
     \() -> Array.map identity arr
+
+
+filter : Input -> () -> Input
+filter arr =
+    \() -> Array.filter (always True) arr
 
 
 indexedMap : Input -> () -> Array.Array ( Int, Int )
 indexedMap arr =
     \() -> Array.indexedMap (,) arr
+
+
+fromList : List Int -> () -> Input
+fromList ls =
+    \() -> Array.fromList ls
+
+
+toList : Input -> () -> List Int
+toList arr =
+    \() -> Array.toList arr
 
 
 indexedList : Input -> () -> List ( Int, Int )
@@ -83,6 +108,8 @@ createSuite n =
             buildByPush n
         , bench "Build by initialize" <|
             buildByInitialize n
+        , bench "Length" <|
+            length sampleArray
         , bench "Set" <|
             set sampleArray
         , bench "Push" <|
@@ -103,12 +130,20 @@ createSuite n =
             slice 3 -3 sampleArray
         , bench "Slice from both mayor" <|
             slice ((n // 2) - 10) (n // 2) sampleArray
-        , bench "Fold" <|
-            fold sampleArray
+        , bench "Foldl" <|
+            foldl sampleArray
+        , bench "Foldr" <|
+            foldr sampleArray
+        , bench "Filter" <|
+            filter sampleArray
         , bench "Map" <|
             map sampleArray
         , bench "Indexed Map" <|
             indexedMap sampleArray
+        , bench "To List" <|
+            toList sampleArray
+        , bench "From List" <|
+            fromList [0..n]
         , bench "Indexed List" <|
             indexedList sampleArray
         , bench "Equality" <|
