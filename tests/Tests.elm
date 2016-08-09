@@ -1,12 +1,12 @@
-module Test.Array exposing (tests)
+module Tests exposing (all)
 
 import Test exposing (Test, describe, test)
 import Expect
 import Hamt.Array exposing (..)
 
 
-tests : Test
-tests =
+all : Test
+all =
     describe "Array"
         [ init'
         , isEmpty'
