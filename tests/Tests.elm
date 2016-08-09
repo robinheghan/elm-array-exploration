@@ -1,6 +1,7 @@
 module Tests exposing (all)
 
-import Test exposing (Test, describe, test)
+import Test exposing (Test, describe, test, fuzz, fuzz2)
+import Fuzz exposing (intRange)
 import Expect
 import Hamt.Array exposing (..)
 
@@ -23,11 +24,11 @@ all =
 init' : Test
 init' =
     describe "Initialization"
-        [ test "initialize" <|
-            \() ->
-                toList (initialize 4 identity)
-                    |> Expect.equal [ 0, 1, 2, 3 ]
-        , test "initialize second" <|
+        [ fuzz (intRange 1 10000) "initialize" <|
+            \size ->
+                toList (initialize size identity)
+                    |> Expect.equal [0..(size - 1)]
+        , test "initialize non-identity" <|
             \() ->
                 toList (initialize 4 (\n -> n * n))
                     |> Expect.equal [ 0, 1, 4, 9 ]
@@ -39,10 +40,6 @@ init' =
             \() ->
                 toList (initialize -2 identity)
                     |> Expect.equal []
-        , test "repeat" <|
-            \() ->
-                toList (repeat 3 0)
-                    |> Expect.equal [ 0, 0, 0 ]
         , test "Large initialize" <|
             \() ->
                 toList (initialize 40000 identity)
@@ -82,102 +79,85 @@ length' =
             \() ->
                 length empty
                     |> Expect.equal 0
-        , test "array of one" <|
-            \() ->
-                length (fromList [ 1 ])
-                    |> Expect.equal 1
-        , test "array of two" <|
-            \() ->
-                length (fromList [ 1, 2 ])
-                    |> Expect.equal 2
-        , test "large array" <|
-            \() ->
-                length (fromList [1..60])
-                    |> Expect.equal 60
-        , test "push" <|
-            \() ->
-                length (push 3 (fromList [ 1, 2 ]))
-                    |> Expect.equal 3
-        , test "append" <|
-            \() ->
-                length (append (fromList [ 1, 2 ]) (fromList [ 3, 4, 5 ]))
-                    |> Expect.equal 5
-        , test "set does not increase" <|
-            \() ->
-                length (set 1 1 (fromList [ 1, 2, 3 ]))
-                    |> Expect.equal 3
-        , test "slice" <|
-            \() ->
-                length (slice 35 -35 (fromList [0..1063]))
-                    |> Expect.equal 994
-        , test "small slice end" <|
-            \() ->
-                length (slice 0 -3 (fromList [0..9]))
-                    |> Expect.equal 7
-        , test "bigger slice end" <|
-            \() ->
-                length (slice 0 -35 (fromList [0..69]))
-                    |> Expect.equal 35
-        , test "initialize" <|
-            \() ->
-                length (initialize 40 identity)
-                    |> Expect.equal 40
+        , fuzz (intRange 1 10000) "non-empty array" <|
+            \size ->
+                length (initialize size identity)
+                    |> Expect.equal size
+        , fuzz (intRange 1 10000) "push" <|
+            \size ->
+                length (push size (initialize size identity))
+                    |> Expect.equal (size + 1)
+        , fuzz (intRange 1 1000) "append" <|
+            \size ->
+                length (append (initialize size identity) (initialize (size // 2) identity))
+                    |> Expect.equal (size + (size // 2))
+        , fuzz (intRange 1 10000) "set does not increase" <|
+            \size ->
+                length (set (size // 2) 1 (initialize size identity))
+                    |> Expect.equal size
+        , fuzz (intRange 100 10000) "big slice" <|
+            \size ->
+                length (slice 35 -35 (initialize size identity))
+                    |> Expect.equal (size - 70)
+        , fuzz2 (intRange -32 0) (intRange 100 10000) "small slice end" <|
+            \n size ->
+                length (slice 0 n (initialize size identity))
+                    |> Expect.equal (size + n)
         ]
 
 
 equality : Test
 equality =
     describe "Equality"
-        [ test "don't matter how you build" <|
-            \() ->
-                initialize 5 identity
-                    |> Expect.equal (List.foldl push empty [0..4])
-        , test "small slice" <|
-            \() ->
-                slice 3 -3 (fromList [0..1063])
-                    |> Expect.equal (fromList [3..1060])
-        , test "large slice" <|
-            \() ->
-                slice 35 -35 (fromList [0..1063])
-                    |> Expect.equal (fromList [35..1028])
+        [ fuzz (intRange 1 10000) "don't matter how you build" <|
+            \size ->
+                initialize size identity
+                    |> Expect.equal (List.foldl push empty [0..(size - 1)])
+        , fuzz2 (intRange -35 0) (intRange 100 35000) "slice" <|
+            \n size ->
+                slice (abs n) n (initialize size identity)
+                    |> Expect.equal (initialize (size + n + n) (\idx -> idx - n))
         ]
 
 
 getSet : Test
 getSet =
     describe "Get and set"
-        [ test "can retrieve element" <|
-            \() ->
-                get 1 (fromList [ 1, 2, 3 ])
-                    |> Expect.equal (Just 2)
-        , test "can retrieve element in large array" <|
-            \() ->
-                get 1100 (fromList [0..1200])
-                    |> Expect.equal (Just 1100)
-        , test "can retrieve from tail" <|
-            \() ->
-                get 1026 (fromList [0..1030])
-                    |> Expect.equal (Just 1026)
-        , test "can retrieve from tree" <|
-            \() ->
-                get 1022 (fromList [0..1030])
-                    |> Expect.equal (Just 1022)
+        [ fuzz2 (intRange 1 35000) (intRange 1 35000) "can retrieve element" <|
+            \x y ->
+                let
+                    n =
+                        min x y
+
+                    size =
+                        max x y
+                in
+                    get n (initialize size identity)
+                        |> Expect.equal (Just n)
         , test "out of bounds retrieval returns nothing" <|
             \() ->
                 get 1 (fromList [ 1 ])
                     |> Expect.equal Nothing
-        , test "set replaces value" <|
-            \() ->
-                set 1 5 (fromList [ 1, 2, 3 ])
-                    |> Expect.equal (fromList [ 1, 5, 3 ])
-        , test "set works on large arrays" <|
-            \() ->
-                get 50 (set 50 5 (fromList [0..1025]))
-                    |> Expect.equal (Just 5)
-        , test "set out of bounds returns original array" <|
-            \() ->
-                set 3 5 (fromList [ 1, 2, 3 ])
-                    |> Expect.equal (fromList [ 1, 2, 3 ])
+        , fuzz2 (intRange 1 35000) (intRange 1 35000) "set replaces value" <|
+            \x y ->
+                let
+                    n =
+                        min x y
+
+                    size =
+                        max x y
+                in
+                    get n (set n 5 (initialize size identity))
+                        |> Expect.equal (Just 5)
+        , fuzz (intRange 1 35000) "set out of bounds returns original array" <|
+            \size ->
+                let
+                    arr =
+                        initialize size identity
+                in
+                    set -1 5 arr
+                        |> set (size + 1) 5
+                        |> Expect.equal arr
         ]
 
 
