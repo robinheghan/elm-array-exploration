@@ -23,11 +23,6 @@ buildByInitialize n =
     \() -> Array.initialize n identity
 
 
-length : Input -> () -> Int
-length arr =
-    \() -> Array.length arr
-
-
 set : Input -> () -> Input
 set arr =
     \() -> Array.set 7 5 arr
@@ -108,8 +103,6 @@ createSuite n =
             buildByPush n
         , bench "Build by initialize" <|
             buildByInitialize n
-        , bench "Length" <|
-            length sampleArray
         , bench "Set" <|
             set sampleArray
         , bench "Push" <|
