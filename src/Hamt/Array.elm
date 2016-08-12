@@ -272,7 +272,7 @@ tailPush : Int -> Int -> JsArray a -> Tree a -> Tree a
 tailPush shift idx tail tree =
     let
         pos =
-            indexShift shift idx
+            Bitwise.and 0x1F <| Bitwise.shiftRightLogical idx shift
     in
         case JsArray.get pos tree of
             Just x ->
@@ -312,11 +312,6 @@ tailPrefix len =
         ((len - 1) `Bitwise.shiftRightLogical` 5) `Bitwise.shiftLeft` 5
 
 
-indexShift : Int -> Int -> Int
-indexShift shift idx =
-    Bitwise.and 0x1F <| Bitwise.shiftRightLogical idx shift
-
-
 {-| Return Just the element at the index or Nothing if the index is out of range.
 
     get  0 (fromList [0,1,2]) == Just 0
@@ -336,7 +331,7 @@ getRecursive : Int -> Int -> Tree a -> Maybe a
 getRecursive shift idx tree =
     let
         pos =
-            indexShift shift idx
+            Bitwise.and 0x1F <| Bitwise.shiftRightLogical idx shift
     in
         case JsArray.get pos tree of
             Just x ->
@@ -378,7 +373,7 @@ setRecursive : Int -> Int -> a -> Tree a -> Tree a
 setRecursive shift idx val tree =
     let
         pos =
-            indexShift shift idx
+            Bitwise.and 0x1F <| Bitwise.shiftRightLogical idx shift
     in
         case JsArray.get pos tree of
             Just x ->
@@ -621,22 +616,26 @@ sliceRight end arr =
                 tailPrefix end
 
             fetchNewTail shift tree =
-                case JsArray.get (indexShift shift endIdx) tree of
-                    Just x ->
-                        case x of
-                            SubTree sub ->
-                                fetchNewTail (shift - 5) sub
+                let
+                    pos =
+                        Bitwise.and 0x1F <| Bitwise.shiftRightLogical endIdx shift
+                in
+                    case JsArray.get pos tree of
+                        Just x ->
+                            case x of
+                                SubTree sub ->
+                                    fetchNewTail (shift - 5) sub
 
-                            Leaf values ->
-                                JsArray.slice 0 (end `Bitwise.and` 0x1F) values
+                                Leaf values ->
+                                    JsArray.slice 0 (end `Bitwise.and` 0x1F) values
 
-                    Nothing ->
-                        Debug.crash crashMsg
+                        Nothing ->
+                            Debug.crash crashMsg
 
             sliceTree shift tree =
                 let
                     lastPos =
-                        indexShift shift endIdx
+                        Bitwise.and 0x1F <| Bitwise.shiftRightLogical endIdx shift
                 in
                     case JsArray.get lastPos tree of
                         Just x ->
