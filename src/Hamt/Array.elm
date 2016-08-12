@@ -533,8 +533,22 @@ slice from to arr =
     in
         if correctFrom > correctTo then
             empty
+        else if correctFrom > 0 then
+            let
+                len =
+                    correctTo - correctFrom
+
+                helper i =
+                    case get (i + correctFrom) arr of
+                        Just x ->
+                            x
+
+                        Nothing ->
+                            Debug.crash crashMsg
+            in
+                initialize len helper
         else
-            sliceLeft correctFrom (sliceRight correctTo arr)
+            sliceRight correctTo arr
 
 
 translateIndex : Int -> Array a -> Int
@@ -629,18 +643,3 @@ sliceRight end arr =
             , tree = sliceTree arr.startShift arr.tree
             , tail = fetchNewTail arr.startShift arr.tree
             }
-
-
-sliceLeft : Int -> Array a -> Array a
-sliceLeft start arr =
-    if start == 0 then
-        arr
-    else
-        let
-            foldl' i ( idx, acc ) =
-                if idx >= start then
-                    ( idx + 1, push i acc )
-                else
-                    ( idx + 1, acc )
-        in
-            snd <| foldl foldl' ( 0, empty ) arr
