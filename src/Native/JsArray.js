@@ -14,11 +14,11 @@ function singleton(val) {
     };
 }
 
-function initialize(size, f) {
+function initialize(size, offset, f) {
     var res = new Array(size);
 
     for (var i = 0; i < size; i++) {
-        res[i] = f(i);
+        res[i] = f(offset + i);
     }
 
     return {
@@ -130,7 +130,7 @@ function merge(dest, source, max) {
 return {
     empty: empty,
     singleton: singleton,
-    initialize: F2(initialize),
+    initialize: F3(initialize),
     length: length,
     get: F2(get),
     set: F3(set),

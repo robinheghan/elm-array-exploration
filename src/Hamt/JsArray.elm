@@ -32,7 +32,7 @@ singleton =
     Native.JsArray.singleton
 
 
-initialize : Int -> (Int -> a) -> JsArray a
+initialize : Int -> Int -> (Int -> a) -> JsArray a
 initialize =
     Native.JsArray.initialize
 
