@@ -143,43 +143,43 @@ initialize stop f =
                         let
                             startIndex =
                                 subTreeSize * idx
+
+                            stopIndex =
+                                min (startIndex + subTreeSize) treeLen
                         in
-                            initializeTree startIndex (min (startIndex + subTreeSize) treeLen) f
+                            initializeTree (subTreeSize // 32) startIndex stopIndex f
                     )
             , tail =
-                JsArray.initialize
-                    tailLen
-                    (\idx -> f (treeLen + idx))
+                JsArray.initialize tailLen (\idx -> f (treeLen + idx))
             }
 
 
-initializeTree : Int -> Int -> (Int -> a) -> Node a
-initializeTree startIndex stopIndex f =
-    let
-        len =
-            stopIndex - startIndex
-    in
-        if len == 32 then
-            Leaf <| JsArray.initialize 32 (\idx -> f (startIndex + idx))
-        else
-            let
-                requiredTreeHeight =
-                    ((len - 1) |> toFloat |> logBase 32 |> floor)
+initializeTree : Int -> Int -> Int -> (Int -> a) -> Node a
+initializeTree subTreeSize startIndex stopIndex f =
+    if subTreeSize == 1 then
+        Leaf <| JsArray.initialize 32 (\idx -> f (startIndex + idx))
+    else
+        let
+            len =
+                stopIndex - startIndex
 
-                subTreeSize =
-                    32 ^ requiredTreeHeight
+            numberOfSubTrees =
+                ceiling ((toFloat len) / (toFloat subTreeSize))
 
-                numberOfSubTrees =
-                    ceiling ((toFloat len) / (toFloat subTreeSize))
+            nextSubTreeSize =
+                subTreeSize // 32
 
-                helper idx =
-                    let
-                        start =
-                            startIndex + (subTreeSize * idx)
-                    in
-                        initializeTree start (min (start + subTreeSize) stopIndex) f
-            in
-                SubTree <| JsArray.initialize numberOfSubTrees helper
+            helper idx =
+                let
+                    start =
+                        startIndex + (subTreeSize * idx)
+
+                    stop =
+                        min (start + subTreeSize) stopIndex
+                in
+                    initializeTree nextSubTreeSize start stop f
+        in
+            SubTree <| JsArray.initialize numberOfSubTrees helper
 
 
 {-| Creates an array with a given length, filled with a default element.
