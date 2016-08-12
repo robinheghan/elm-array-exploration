@@ -12,6 +12,7 @@ module Hamt.JsArray
         , foldr
         , map
         , slice
+        , merge
         )
 
 import Native.JsArray
@@ -74,3 +75,8 @@ map =
 slice : Int -> Int -> JsArray a -> JsArray a
 slice =
     Native.JsArray.slice
+
+
+merge : JsArray a -> JsArray a -> Int -> JsArray a
+merge =
+    Native.JsArray.merge

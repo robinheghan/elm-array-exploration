@@ -25,7 +25,7 @@ all =
 -}
 defaultSizeRange : Fuzzer Int
 defaultSizeRange =
-    (intRange 1 35000)
+    (intRange 1 33000)
 
 
 init' : Test

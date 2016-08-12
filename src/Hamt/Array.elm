@@ -447,7 +447,42 @@ foldl f init arr =
 -}
 append : Array a -> Array a -> Array a
 append a b =
-    foldl push a b
+    let
+        helper i acc =
+            case i of
+                SubTree subTree ->
+                    JsArray.foldl helper acc subTree
+
+                Leaf values ->
+                    tailMerge values acc
+
+        tailMerge toMerge arr =
+            let
+                toMergeLen =
+                    JsArray.length toMerge
+
+                tailToInsert =
+                    JsArray.merge arr.tail toMerge 32
+
+                sizeDiff =
+                    (JsArray.length tailToInsert) - (JsArray.length arr.tail)
+
+                leftOver =
+                    max 0 <| (JsArray.length arr.tail) + toMergeLen - 32
+
+                newArr =
+                    pushTree sizeDiff tailToInsert arr
+            in
+                if leftOver == 0 then
+                    newArr
+                else
+                    { newArr
+                        | length = newArr.length + leftOver
+                        , tail = JsArray.slice (toMergeLen - leftOver) toMergeLen toMerge
+                    }
+    in
+        JsArray.foldl helper a b.tree
+            |> tailMerge b.tail
 
 
 {-| Keep only elements that satisfy the predicate:

@@ -105,6 +105,28 @@ function slice(from, to, arr) {
     };
 }
 
+function merge(dest, source, max) {
+    var destLen = dest._0.length,
+        toCopy = max - destLen,
+        sourceStop = toCopy > source._0.length ? source._0.length : toCopy,
+        combinedLen = destLen + source._0.length,
+        len = combinedLen > max ? max : combinedLen,
+        arr = new Array(len);
+
+    for (var i = 0; i < destLen; i++) {
+        arr[i] = dest._0[i];
+    }
+
+    for (i = 0; i < sourceStop; i++) {
+        arr[i + destLen] = source._0[i];
+    }
+
+    return {
+        ctor: 'JsArray',
+        _0: arr
+    };
+}
+
 return {
     empty: empty,
     singleton: singleton,
@@ -116,7 +138,8 @@ return {
     foldl: F3(foldl),
     foldr: F3(foldr),
     map: F2(map),
-    slice: F3(slice)
+    slice: F3(slice),
+    merge: F3(merge)
 };
 
 }();
