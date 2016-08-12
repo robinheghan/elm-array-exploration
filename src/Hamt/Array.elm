@@ -473,15 +473,19 @@ filter f arr =
 map : (a -> b) -> Array a -> Array b
 map f arr =
     let
-        helper idx =
-            case get idx arr of
-                Just x ->
-                    f x
+        helper i =
+            case i of
+                SubTree subTree ->
+                    SubTree <| JsArray.map helper subTree
 
-                Nothing ->
-                    Debug.crash crashMsg
+                Leaf values ->
+                    Leaf <| JsArray.map f values
     in
-        initialize arr.length helper
+        { length = arr.length
+        , startShift = arr.startShift
+        , tree = JsArray.map helper arr.tree
+        , tail = JsArray.map f arr.tail
+        }
 
 
 {-| Apply a function on every element with its index as first argument.

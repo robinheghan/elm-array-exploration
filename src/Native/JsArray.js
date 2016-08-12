@@ -84,6 +84,20 @@ function foldr(f, init, arr) {
     return a;
 }
 
+function map(f, arr) {
+    var copy = arr._0.slice(),
+        len = copy.length;
+
+    for (var i = 0; i < len; i++) {
+        copy[i] = f(copy[i]);
+    }
+
+    return {
+        ctor: 'JsArray',
+        _0: copy
+    }
+}
+
 function slice(from, to, arr) {
     return {
         ctor: 'JsArray',
@@ -101,6 +115,7 @@ return {
     push: F2(push),
     foldl: F3(foldl),
     foldr: F3(foldr),
+    map: F2(map),
     slice: F3(slice)
 };
 
