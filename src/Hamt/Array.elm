@@ -232,17 +232,15 @@ toIndexedList arr =
 -}
 push : a -> Array a -> Array a
 push a arr =
-    pushTree 1 (JsArray.push a arr.tail) arr
-
-
-pushTree : Int -> JsArray a -> Array a -> Array a
-pushTree mod newTail arr =
     let
-        newLen =
-            arr.length + mod
+        newTail =
+            JsArray.push a arr.tail
 
-        newShift =
-            calcStartShift newLen
+        newLen =
+            arr.length + 1
+
+        overflow =
+            (newLen `Bitwise.shiftRightLogical` 5) >= (1 `Bitwise.shiftLeft` arr.startShift)
 
         tailLen =
             JsArray.length newTail
@@ -254,9 +252,13 @@ pushTree mod newTail arr =
                 arr.tree
     in
         { length = newLen
-        , startShift = newShift
+        , startShift =
+            if overflow then
+                arr.startShift + 5
+            else
+                arr.startShift
         , tree =
-            if newShift > arr.startShift then
+            if overflow then
                 JsArray.singleton (SubTree newTree)
             else
                 newTree
@@ -294,14 +296,6 @@ tailPush shift idx tail tree =
 
             Nothing ->
                 JsArray.push (Leaf tail) tree
-
-
-calcStartShift : Int -> Int
-calcStartShift len =
-    if len < 1024 then
-        5
-    else
-        (len |> toFloat |> logBase 32 |> floor) * 5
 
 
 tailPrefix : Int -> Int
@@ -461,22 +455,41 @@ append a b =
                 tailToInsert =
                     JsArray.merge arr.tail toMerge 32
 
-                sizeDiff =
-                    (JsArray.length tailToInsert) - (JsArray.length arr.tail)
+                tailLen =
+                    JsArray.length tailToInsert
 
                 leftOver =
                     max 0 <| (JsArray.length arr.tail) + toMergeLen - 32
 
-                newArr =
-                    pushTree sizeDiff tailToInsert arr
+                newLen =
+                    arr.length + toMergeLen
+
+                overflow =
+                    (newLen `Bitwise.shiftRightLogical` 5) >= (1 `Bitwise.shiftLeft` arr.startShift)
+
+                newTree =
+                    if tailLen == 32 then
+                        tailPush arr.startShift arr.length tailToInsert arr.tree
+                    else
+                        arr.tree
             in
-                if leftOver == 0 then
-                    newArr
-                else
-                    { newArr
-                        | length = newArr.length + leftOver
-                        , tail = JsArray.slice (toMergeLen - leftOver) toMergeLen toMerge
-                    }
+                { length = newLen
+                , startShift =
+                    if overflow then
+                        arr.startShift + 5
+                    else
+                        arr.startShift
+                , tree =
+                    if overflow then
+                        JsArray.singleton (SubTree newTree)
+                    else
+                        newTree
+                , tail =
+                    if tailLen == 32 then
+                        JsArray.slice (toMergeLen - leftOver) toMergeLen toMerge
+                    else
+                        tailToInsert
+                }
     in
         JsArray.foldl helper a b.tree
             |> tailMerge b.tail
@@ -675,7 +688,11 @@ sliceRight end arr =
                             Debug.crash crashMsg
         in
             { length = end
-            , startShift = calcStartShift end
+            , startShift =
+                if end < 1024 then
+                    5
+                else
+                    (end |> toFloat |> logBase 32 |> floor) * 5
             , tree = sliceTree arr.startShift arr.tree
             , tail = fetchNewTail arr.startShift arr.tree
             }
