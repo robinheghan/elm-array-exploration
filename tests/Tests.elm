@@ -102,17 +102,17 @@ length' =
             \size ->
                 length (slice 35 -35 (initialize size identity))
                     |> Expect.equal (size - 70)
-        , fuzz2 (intRange -32 0) (intRange 100 10000) "small slice end" <|
+        , fuzz2 (intRange 2 32) (intRange 100 10000) "small slice end" <|
             \n size ->
-                length (slice 0 n (initialize size identity))
-                    |> Expect.equal (size + n)
+                length (slice 0 (negate n) (initialize size identity))
+                    |> Expect.equal (size - n)
         ]
 
 
 equality : Test
 equality =
     describe "Equality"
-        [ fuzz2 (intRange -35 0) (intRange 100 35000) "slice" <|
+        [ fuzz2 (intRange -35 -1) (intRange 100 35000) "slice" <|
             \n size ->
                 slice (abs n) n (initialize size identity)
                     |> Expect.equal (initialize (size + n + n) (\idx -> idx - n))
@@ -154,7 +154,7 @@ getSet =
                 in
                     get n (set n 5 (initialize size identity))
                         |> Expect.equal (Just 5)
-        , fuzz2 (intRange 0 50) defaultSizeRange "set out of bounds returns original array" <|
+        , fuzz2 (intRange 1 50) defaultSizeRange "set out of bounds returns original array" <|
             \n size ->
                 let
                     arr =

@@ -158,30 +158,31 @@ initialize stop f =
 
 initializeTree : Int -> Int -> Int -> (Int -> a) -> Node a
 initializeTree subTreeSize startIndex stopIndex f =
-    if subTreeSize == 1 then
-        Leaf <| JsArray.initialize 32 startIndex f
-    else
-        let
-            len =
-                stopIndex - startIndex
+    let
+        len =
+            stopIndex - startIndex
+    in
+        if len == 32 then
+            Leaf <| JsArray.initialize 32 startIndex f
+        else
+            let
+                numberOfSubTrees =
+                    ceiling ((toFloat len) / (toFloat subTreeSize))
 
-            numberOfSubTrees =
-                ceiling ((toFloat len) / (toFloat subTreeSize))
+                nextSubTreeSize =
+                    subTreeSize // 32
 
-            nextSubTreeSize =
-                subTreeSize // 32
+                helper idx =
+                    let
+                        start =
+                            startIndex + (subTreeSize * idx)
 
-            helper idx =
-                let
-                    start =
-                        startIndex + (subTreeSize * idx)
-
-                    stop =
-                        min (start + subTreeSize) stopIndex
-                in
-                    initializeTree nextSubTreeSize start stop f
-        in
-            SubTree <| JsArray.initialize numberOfSubTrees 0 helper
+                        stop =
+                            min (start + subTreeSize) stopIndex
+                    in
+                        initializeTree nextSubTreeSize start stop f
+            in
+                SubTree <| JsArray.initialize numberOfSubTrees 0 helper
 
 
 {-| Creates an array with a given length, filled with a default element.
@@ -303,7 +304,7 @@ tailPrefix len =
     if len < 32 then
         0
     else
-        ((len - 1) `Bitwise.shiftRightLogical` 5) `Bitwise.shiftLeft` 5
+        (len `Bitwise.shiftRightLogical` 5) `Bitwise.shiftLeft` 5
 
 
 {-| Return Just the element at the index or Nothing if the index is out of range.
@@ -315,7 +316,9 @@ tailPrefix len =
 -}
 get : Int -> Array a -> Maybe a
 get idx arr =
-    if idx >= tailPrefix arr.length then
+    if idx < 0 || idx >= arr.length then
+        Nothing
+    else if idx >= tailPrefix arr.length then
         JsArray.get (idx `Bitwise.and` 0x1F) arr.tail
     else
         getRecursive arr.startShift idx arr.tree
@@ -337,7 +340,7 @@ getRecursive shift idx tree =
                         JsArray.get (idx `Bitwise.and` 0x1F) values
 
             Nothing ->
-                Nothing
+                Debug.crash crashMsg
 
 
 {-| Set the element at a particular index. Returns an updated array.
@@ -349,7 +352,7 @@ set : Int -> a -> Array a -> Array a
 set idx val arr =
     if idx < 0 || idx >= arr.length then
         arr
-    else if idx >= (tailPrefix arr.length) then
+    else if idx >= tailPrefix arr.length then
         { length = arr.length
         , startShift = arr.startShift
         , tree = arr.tree
