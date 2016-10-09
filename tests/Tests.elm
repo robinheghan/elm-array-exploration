@@ -12,7 +12,6 @@ all =
         [ init'
         , isEmpty'
         , length'
-        , equality
         , getSet
         , conversion
         , transform
@@ -102,20 +101,10 @@ length' =
             \size ->
                 length (slice 35 -35 (initialize size identity))
                     |> Expect.equal (size - 70)
-        , fuzz2 (intRange 2 32) (intRange 100 10000) "small slice end" <|
+        , fuzz2 (intRange -32 -1) (intRange 100 10000) "small slice end" <|
             \n size ->
-                length (slice 0 (negate n) (initialize size identity))
-                    |> Expect.equal (size - n)
-        ]
-
-
-equality : Test
-equality =
-    describe "Equality"
-        [ fuzz2 (intRange -35 -1) (intRange 100 35000) "slice" <|
-            \n size ->
-                slice (abs n) n (initialize size identity)
-                    |> Expect.equal (initialize (size + n + n) (\idx -> idx - n))
+                length (slice 0 n (initialize size identity))
+                    |> Expect.equal (size + n)
         ]
 
 
@@ -133,7 +122,7 @@ getSet =
                 in
                     get n (initialize size identity)
                         |> Expect.equal (Just n)
-        , fuzz2 (intRange 1 50) (intRange 100 35000) "out of bounds retrieval returns nothing" <|
+        , fuzz2 (intRange 1 50) (intRange 100 33000) "out of bounds retrieval returns nothing" <|
             \n size ->
                 let
                     arr =
@@ -163,6 +152,10 @@ getSet =
                     set (negate n) 5 arr
                         |> set (size + n) 5
                         |> Expect.equal arr
+        , test "Retrieval works from tail" <|
+            \() ->
+                get 1030 (set 1030 5 (initialize 1035 identity))
+                    |> Expect.equal (Just 5)
         ]
 
 
@@ -223,74 +216,40 @@ slice' =
     let
         smallSample =
             fromList [1..8]
-
-        largeSample =
-            fromList [0..1063]
-
-        largeLen =
-            1064
     in
         describe "Slice"
-            [ test "both small" <|
+            [ fuzz2 (intRange -50 -1) (intRange 100 33000) "both" <|
+                \n size ->
+                    slice (abs n) n (initialize size identity)
+                        |> Expect.equal (initialize (size + n + n) (\idx -> idx - n))
+            , fuzz2 (intRange -50 -1) (intRange 100 33000) "left" <|
+                \n size ->
+                    let
+                        arr =
+                            initialize size identity
+                    in
+                        slice (abs n) (length arr) arr
+                            |> Expect.equal (initialize (size + n) (\idx -> idx - n))
+            , fuzz2 (intRange -50 -1) (intRange 100 33000) "right" <|
+                \n size ->
+                    slice 0 n (initialize size identity)
+                        |> Expect.equal (initialize (size + n) identity)
+            , test "both small" <|
                 \() ->
                     toList (slice 2 5 smallSample)
                         |> Expect.equal [3..5]
             , test "start small" <|
                 \() ->
-                    let
-                        arr =
-                            fromList [1..10]
-                    in
-                        toList (slice 2 (length arr) arr)
-                            |> Expect.equal [3..10]
+                    toList (slice 2 (length smallSample) smallSample)
+                        |> Expect.equal [3..8]
             , test "negative" <|
                 \() ->
                     toList (slice -5 -2 smallSample)
                         |> Expect.equal [4..6]
-            , test "combined" <|
-                \() ->
-                    toList (slice 2 -2 smallSample)
-                        |> Expect.equal [3..6]
             , test "impossible" <|
                 \() ->
                     toList (slice -1 -2 smallSample)
                         |> Expect.equal []
-            , test "start mayor" <|
-                \() ->
-                    toList (slice (largeLen // 2) largeLen largeSample)
-                        |> Expect.equal [532..1063]
-            , test "end mayor" <|
-                \() ->
-                    toList (slice 0 (largeLen // 2) largeSample)
-                        |> Expect.equal [0..531]
-            , test "both mayor" <|
-                \() ->
-                    toList (slice (largeLen // 2) (largeLen // 2 + 10) largeSample)
-                        |> Expect.equal [532..541]
-            , test "start minor" <|
-                \() ->
-                    toList (slice 3 largeLen largeSample)
-                        |> Expect.equal [3..1063]
-            , test "end minor" <|
-                \() ->
-                    toList (slice 0 -3 largeSample)
-                        |> Expect.equal [0..1060]
-            , test "both minor" <|
-                \() ->
-                    toList (slice 3 -3 largeSample)
-                        |> Expect.equal [3..1060]
-            , test "past threshold left" <|
-                \() ->
-                    slice 60 largeLen largeSample
-                        |> Expect.equal (fromList [60..(largeLen - 1)])
-            , test "past threshold right" <|
-                \() ->
-                    slice 0 -60 largeSample
-                        |> Expect.equal (fromList [0..(largeLen - 61)])
-            , test "reduce to single element" <|
-                \() ->
-                    slice 0 1 largeSample
-                        |> Expect.equal (fromList [ 0 ])
             ]
 
 
