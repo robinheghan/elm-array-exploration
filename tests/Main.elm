@@ -5,9 +5,9 @@ import Test.Runner.Node exposing (run, runWithOptions)
 import Json.Encode exposing (Value)
 
 
-main : Program Never
+main : Program Value
 main =
-    (runWithOptions (Just 100) Nothing) emit Tests.all
+    (runWithOptions { runs = 500, seed = Nothing }) emit Tests.all
 
 
 port emit : ( String, Value ) -> Cmd msg

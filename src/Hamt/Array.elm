@@ -631,6 +631,12 @@ sliceRight end arr =
             endIdx =
                 tailPrefix end
 
+            newShift =
+                if end < 1024 then
+                    5
+                else
+                    (end |> toFloat |> logBase 32 |> floor) * 5
+
             fetchNewTail shift tree =
                 let
                     pos =
@@ -660,42 +666,60 @@ sliceRight end arr =
                                     let
                                         newSub =
                                             sliceTree (shift - 5) sub
-
-                                        newTree =
-                                            if JsArray.length newSub == 0 then
+                                    in
+                                        case JsArray.length newSub of
+                                            0 ->
                                                 JsArray.slice 0 lastPos tree
-                                            else
+
+                                            1 ->
+                                                case JsArray.get 0 newSub of
+                                                    Just x ->
+                                                        case x of
+                                                            SubTree _ ->
+                                                                tree
+                                                                    |> JsArray.slice 0 (lastPos + 1)
+                                                                    |> JsArray.set lastPos (SubTree newSub)
+
+                                                            Leaf _ ->
+                                                                tree
+                                                                    |> JsArray.slice 0 (lastPos + 1)
+                                                                    |> JsArray.set lastPos x
+
+                                                    Nothing ->
+                                                        Debug.crash crashMsg
+
+                                            _ ->
                                                 tree
                                                     |> JsArray.slice 0 (lastPos + 1)
                                                     |> JsArray.set lastPos (SubTree newSub)
-                                    in
-                                        if JsArray.length newTree == 1 then
-                                            case JsArray.get 0 newTree of
-                                                Just x ->
-                                                    case x of
-                                                        SubTree y ->
-                                                            y
-
-                                                        _ ->
-                                                            Debug.crash crashMsg
-
-                                                Nothing ->
-                                                    Debug.crash crashMsg
-                                        else
-                                            newTree
 
                                 Leaf _ ->
                                     JsArray.slice 0 lastPos tree
 
                         Nothing ->
                             Debug.crash crashMsg
+
+            hoistTree oldShift newShift tree =
+                if oldShift <= newShift then
+                    tree
+                else
+                    case JsArray.get 0 tree of
+                        Just x ->
+                            case x of
+                                SubTree sub ->
+                                    hoistTree (oldShift - 5) newShift sub
+
+                                Leaf _ ->
+                                    tree
+
+                        Nothing ->
+                            Debug.crash crashMsg
         in
             { length = end
-            , startShift =
-                if end < 1024 then
-                    5
-                else
-                    (end |> toFloat |> logBase 32 |> floor) * 5
-            , tree = sliceTree arr.startShift arr.tree
+            , startShift = newShift
+            , tree =
+                arr.tree
+                    |> sliceTree arr.startShift
+                    |> hoistTree arr.startShift newShift
             , tail = fetchNewTail arr.startShift arr.tree
             }

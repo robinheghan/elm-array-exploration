@@ -120,7 +120,7 @@ getSet =
                     size =
                         max x y
                 in
-                    get n (initialize size identity)
+                    get n (initialize (size + 1) identity)
                         |> Expect.equal (Just n)
         , fuzz2 (intRange 1 50) (intRange 100 33000) "out of bounds retrieval returns nothing" <|
             \n size ->
@@ -141,7 +141,7 @@ getSet =
                     size =
                         max x y
                 in
-                    get n (set n 5 (initialize size identity))
+                    get n (set n 5 (initialize (size + 1) identity))
                         |> Expect.equal (Just 5)
         , fuzz2 (intRange 1 50) defaultSizeRange "set out of bounds returns original array" <|
             \n size ->
