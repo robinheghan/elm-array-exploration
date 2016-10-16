@@ -1,7 +1,7 @@
 module Bench.Array exposing (large)
 
 import Bench.Native exposing (Benchmark, BenchmarkSuite, bench, suite)
-import Hamt.Array as Array exposing (Array)
+import Array.Hamt as Array exposing (Array)
 
 
 type alias Input =
@@ -15,7 +15,7 @@ largeArraySize =
 
 buildByPush : Int -> () -> Input
 buildByPush n =
-    \() -> List.foldl Array.push Array.empty [1..n]
+    \() -> List.foldl Array.push Array.empty (List.range 1 n)
 
 
 buildByInitialize : Int -> () -> Input
@@ -136,7 +136,7 @@ createSuite n =
         , bench "To List" <|
             toList sampleArray
         , bench "From List" <|
-            fromList [0..n]
+            fromList (List.range 0 n)
         , bench "Indexed List" <|
             indexedList sampleArray
         , bench "Equality" <|

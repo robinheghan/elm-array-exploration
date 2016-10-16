@@ -1,4 +1,4 @@
-var _user$project$Native_Benchmark = (function () {
+var _Skinney$elm_array_exploration$Native_Benchmark = (function () {
     function bench(name, fn) {
         return {
             name: name,

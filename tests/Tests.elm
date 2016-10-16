@@ -3,20 +3,20 @@ module Tests exposing (all)
 import Test exposing (Test, describe, test, fuzz, fuzz2)
 import Fuzz exposing (Fuzzer, intRange)
 import Expect
-import Hamt.Array exposing (..)
+import Array.Hamt exposing (..)
 
 
 all : Test
 all =
     describe "Array"
-        [ init'
-        , isEmpty'
-        , length'
-        , getSet
-        , conversion
-        , transform
-        , slice'
-        , runtimeCrash
+        [ initTests
+        , isEmptyTests
+        , lengthTests
+        , getSetTests
+        , conversionTests
+        , transformTests
+        , sliceTests
+        , runtimeCrashTests
         ]
 
 
@@ -27,8 +27,8 @@ defaultSizeRange =
     (intRange 1 33000)
 
 
-init' : Test
-init' =
+initTests : Test
+initTests =
     describe "Initialization"
         [ fuzz defaultSizeRange "initialize" <|
             \size ->
@@ -53,8 +53,8 @@ init' =
         ]
 
 
-isEmpty' : Test
-isEmpty' =
+isEmptyTests : Test
+isEmptyTests =
     describe "isEmpty"
         [ test "all empty arrays are equal" <|
             \() ->
@@ -74,8 +74,8 @@ isEmpty' =
         ]
 
 
-length' : Test
-length' =
+lengthTests : Test
+lengthTests =
     describe "Length"
         [ test "empty array" <|
             \() ->
@@ -108,8 +108,8 @@ length' =
         ]
 
 
-getSet : Test
-getSet =
+getSetTests : Test
+getSetTests =
     describe "Get and set"
         [ fuzz2 defaultSizeRange defaultSizeRange "can retrieve element" <|
             \x y ->
@@ -159,8 +159,8 @@ getSet =
         ]
 
 
-conversion : Test
-conversion =
+conversionTests : Test
+conversionTests =
     describe "Conversion"
         [ fuzz defaultSizeRange "back and forth" <|
             \size ->
@@ -177,8 +177,8 @@ conversion =
         ]
 
 
-transform : Test
-transform =
+transformTests : Test
+transformTests =
     describe "Transform"
         [ fuzz defaultSizeRange "foldl" <|
             \size ->
@@ -211,8 +211,8 @@ transform =
         ]
 
 
-slice' : Test
-slice' =
+sliceTests : Test
+sliceTests =
     let
         smallSample =
             fromList [1..8]
@@ -253,8 +253,8 @@ slice' =
             ]
 
 
-runtimeCrash : Test
-runtimeCrash =
+runtimeCrashTests : Test
+runtimeCrashTests =
     describe "Runtime crashes in core"
         [ test "magic slice" <|
             \() ->

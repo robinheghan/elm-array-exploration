@@ -1,4 +1,4 @@
-module Hamt.JsArray
+module Array.JsArray
     exposing
         ( JsArray
         , empty

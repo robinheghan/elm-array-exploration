@@ -1,4 +1,4 @@
-module Hamt.Array
+module Array.Hamt
     exposing
         ( Array
         , empty
@@ -44,7 +44,7 @@ same type.
 -}
 
 import Bitwise
-import Hamt.JsArray as JsArray exposing (JsArray)
+import Array.JsArray as JsArray exposing (JsArray)
 
 
 {-| Representation of fast immutable arrays. You can create arrays of integers
@@ -120,7 +120,7 @@ initialize stop f =
     else
         let
             tailLen =
-                stop `Bitwise.and` 0x1F
+                Bitwise.and 0x1F stop
 
             treeLen =
                 stop - tailLen
@@ -221,10 +221,10 @@ paired with its index.
 toIndexedList : Array a -> List ( Int, a )
 toIndexedList arr =
     let
-        foldr' n ( idx, ls ) =
+        helper n ( idx, ls ) =
             ( idx - 1, ( idx, n ) :: ls )
     in
-        snd <| foldr foldr' ( length arr - 1, [] ) arr
+        snd <| foldr helper ( length arr - 1, [] ) arr
 
 
 {-| Push an element to the end of an array.
@@ -241,7 +241,7 @@ push a arr =
             arr.length + 1
 
         overflow =
-            (newLen `Bitwise.shiftRightLogical` 5) >= (1 `Bitwise.shiftLeft` arr.startShift)
+            (Bitwise.shiftRightZfBy 5 newLen) >= (Bitwise.shiftLeftBy 1 arr.startShift)
 
         tailLen =
             JsArray.length newTail
@@ -275,7 +275,7 @@ tailPush : Int -> Int -> JsArray a -> Tree a -> Tree a
 tailPush shift idx tail tree =
     let
         pos =
-            Bitwise.and 0x1F <| Bitwise.shiftRightLogical idx shift
+            Bitwise.and 0x1F <| Bitwise.shiftRightZfBy shift idx
     in
         case JsArray.get pos tree of
             Just x ->
@@ -304,7 +304,9 @@ tailPrefix len =
     if len < 32 then
         0
     else
-        (len `Bitwise.shiftRightLogical` 5) `Bitwise.shiftLeft` 5
+        len
+            |> Bitwise.shiftRightZfBy 5
+            |> Bitwise.shiftLeftBy 5
 
 
 {-| Return Just the element at the index or Nothing if the index is out of range.
@@ -319,7 +321,7 @@ get idx arr =
     if idx < 0 || idx >= arr.length then
         Nothing
     else if idx >= tailPrefix arr.length then
-        JsArray.get (idx `Bitwise.and` 0x1F) arr.tail
+        JsArray.get (Bitwise.and 0x1F idx) arr.tail
     else
         getRecursive arr.startShift idx arr.tree
 
@@ -328,7 +330,7 @@ getRecursive : Int -> Int -> Tree a -> Maybe a
 getRecursive shift idx tree =
     let
         pos =
-            Bitwise.and 0x1F <| Bitwise.shiftRightLogical idx shift
+            Bitwise.and 0x1F <| Bitwise.shiftRightZfBy shift idx
     in
         case JsArray.get pos tree of
             Just x ->
@@ -337,7 +339,7 @@ getRecursive shift idx tree =
                         getRecursive (shift - 5) idx subTree
 
                     Leaf values ->
-                        JsArray.get (idx `Bitwise.and` 0x1F) values
+                        JsArray.get (Bitwise.and 0x1F idx) values
 
             Nothing ->
                 Debug.crash crashMsg
@@ -356,7 +358,7 @@ set idx val arr =
         { length = arr.length
         , startShift = arr.startShift
         , tree = arr.tree
-        , tail = JsArray.set (idx `Bitwise.and` 0x1F) val arr.tail
+        , tail = JsArray.set (Bitwise.and 0x1F idx) val arr.tail
         }
     else
         { length = arr.length
@@ -370,7 +372,7 @@ setRecursive : Int -> Int -> a -> Tree a -> Tree a
 setRecursive shift idx val tree =
     let
         pos =
-            Bitwise.and 0x1F <| Bitwise.shiftRightLogical idx shift
+            Bitwise.and 0x1F <| Bitwise.shiftRightZfBy shift idx
     in
         case JsArray.get pos tree of
             Just x ->
@@ -385,7 +387,7 @@ setRecursive shift idx val tree =
                     Leaf values ->
                         let
                             newLeaf =
-                                JsArray.set (idx `Bitwise.and` 0x1F) val values
+                                JsArray.set (Bitwise.and 0x1F idx) val values
                         in
                             JsArray.set pos (Leaf newLeaf) tree
 
@@ -400,10 +402,10 @@ setRecursive shift idx val tree =
 foldr : (a -> b -> b) -> b -> Array a -> b
 foldr f init arr =
     let
-        foldr' i acc =
+        helper i acc =
             case i of
                 SubTree subTree ->
-                    JsArray.foldr foldr' acc subTree
+                    JsArray.foldr helper acc subTree
 
                 Leaf values ->
                     JsArray.foldr f acc values
@@ -411,7 +413,7 @@ foldr f init arr =
         tail =
             JsArray.foldr f init arr.tail
     in
-        JsArray.foldr foldr' tail arr.tree
+        JsArray.foldr helper tail arr.tree
 
 
 {-| Reduce an array from the left. Read `foldl` as fold from the left.
@@ -421,16 +423,16 @@ foldr f init arr =
 foldl : (a -> b -> b) -> b -> Array a -> b
 foldl f init arr =
     let
-        foldl' i acc =
+        helper i acc =
             case i of
                 SubTree subTree ->
-                    JsArray.foldl foldl' acc subTree
+                    JsArray.foldl helper acc subTree
 
                 Leaf values ->
                     JsArray.foldl f acc values
 
         tree =
-            JsArray.foldl foldl' init arr.tree
+            JsArray.foldl helper init arr.tree
     in
         JsArray.foldl f tree arr.tail
 
@@ -468,7 +470,7 @@ append a b =
                     arr.length + toMergeLen
 
                 overflow =
-                    (newLen `Bitwise.shiftRightLogical` 5) >= (1 `Bitwise.shiftLeft` arr.startShift)
+                    (Bitwise.shiftRightZfBy 5 newLen) >= (Bitwise.shiftLeftBy 1 arr.startShift)
 
                 newTree =
                     if tailLen == 32 then
@@ -505,13 +507,13 @@ append a b =
 filter : (a -> Bool) -> Array a -> Array a
 filter f arr =
     let
-        update n acc =
+        helper n acc =
             if f n then
                 push n acc
             else
                 acc
     in
-        foldl update empty arr
+        foldl helper empty arr
 
 
 {-| Apply a function on every element in an array.
@@ -624,7 +626,7 @@ sliceRight end arr =
         { length = end
         , startShift = arr.startShift
         , tree = arr.tree
-        , tail = JsArray.slice 0 (end `Bitwise.and` 0x1F) arr.tail
+        , tail = JsArray.slice 0 (Bitwise.and 0x1F end) arr.tail
         }
     else
         let
@@ -640,7 +642,7 @@ sliceRight end arr =
             fetchNewTail shift tree =
                 let
                     pos =
-                        Bitwise.and 0x1F <| Bitwise.shiftRightLogical endIdx shift
+                        Bitwise.and 0x1F <| Bitwise.shiftRightZfBy shift endIdx
                 in
                     case JsArray.get pos tree of
                         Just x ->
@@ -649,7 +651,7 @@ sliceRight end arr =
                                     fetchNewTail (shift - 5) sub
 
                                 Leaf values ->
-                                    JsArray.slice 0 (end `Bitwise.and` 0x1F) values
+                                    JsArray.slice 0 (Bitwise.and 0x1F end) values
 
                         Nothing ->
                             Debug.crash crashMsg
@@ -657,7 +659,7 @@ sliceRight end arr =
             sliceTree shift tree =
                 let
                     lastPos =
-                        Bitwise.and 0x1F <| Bitwise.shiftRightLogical endIdx shift
+                        Bitwise.and 0x1F <| Bitwise.shiftRightZfBy shift endIdx
                 in
                     case JsArray.get lastPos tree of
                         Just x ->

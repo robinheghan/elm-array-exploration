@@ -1,14 +1,13 @@
 module Main exposing (main)
 
 import Html
-import Html.App
 import Bench.Native as Benchmark
 import Bench.Array
 
 
-main : Program Never
+main : Program Never () a
 main =
-    Html.App.beginnerProgram
+    Html.beginnerProgram
         { model = ()
         , update = \_ _ -> ()
         , view = \() -> Html.text "Done!"

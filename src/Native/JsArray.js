@@ -1,4 +1,4 @@
-var _user$project$Native_JsArray = function() {
+var _Skinney$elm_array_exploration$Native_JsArray = function() {
 /* A thin, but still immutable, wrapper over native Javascript arrays. */
 
 // An empty array
