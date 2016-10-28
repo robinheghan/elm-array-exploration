@@ -44,6 +44,7 @@ same type.
 -}
 
 import Bitwise
+import Tuple
 import Array.JsArray as JsArray exposing (JsArray)
 
 
@@ -224,7 +225,7 @@ toIndexedList arr =
         helper n ( idx, ls ) =
             ( idx - 1, ( idx, n ) :: ls )
     in
-        snd <| foldr helper ( length arr - 1, [] ) arr
+        Tuple.second <| foldr helper ( length arr - 1, [] ) arr
 
 
 {-| Push an element to the end of an array.
@@ -241,7 +242,7 @@ push a arr =
             arr.length + 1
 
         overflow =
-            (Bitwise.shiftRightZfBy 5 newLen) >= (Bitwise.shiftLeftBy 1 arr.startShift)
+            (Bitwise.shiftRightZfBy 5 newLen) >= (Bitwise.shiftLeftBy arr.startShift 1)
 
         tailLen =
             JsArray.length newTail
@@ -470,7 +471,7 @@ append a b =
                     arr.length + toMergeLen
 
                 overflow =
-                    (Bitwise.shiftRightZfBy 5 newLen) >= (Bitwise.shiftLeftBy 1 arr.startShift)
+                    (Bitwise.shiftRightZfBy 5 newLen) >= (Bitwise.shiftLeftBy arr.startShift 1)
 
                 newTree =
                     if tailLen == 32 then
