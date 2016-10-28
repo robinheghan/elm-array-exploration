@@ -13,9 +13,9 @@ largeArraySize =
     10000
 
 
-buildByPush : Int -> () -> Input
-buildByPush n =
-    \() -> List.foldl Array.push Array.empty (List.range 1 n)
+buildByPush : List Int -> () -> Input
+buildByPush ls =
+    \() -> List.foldl Array.push Array.empty ls
 
 
 buildByInitialize : Int -> () -> Input
@@ -97,10 +97,16 @@ createSuite : Int -> List Benchmark
 createSuite n =
     let
         sampleArray =
-            buildByPush n ()
+            buildByInitialize n ()
+
+        sampleList =
+            List.range 1 n
+
+        equalButDifferentSample =
+            buildByInitialize n ()
     in
         [ bench "Build by push" <|
-            buildByPush n
+            buildByPush sampleList
         , bench "Build by initialize" <|
             buildByInitialize n
         , bench "Set" <|
@@ -136,7 +142,7 @@ createSuite n =
         , bench "To List" <|
             toList sampleArray
         , bench "From List" <|
-            fromList (List.range 0 n)
+            fromList sampleList
         , bench "Indexed List" <|
             indexedList sampleArray
         , bench "Equality" <|
@@ -144,7 +150,7 @@ createSuite n =
         , bench "Equality fail" <|
             equality sampleArray (Array.set 5 7 sampleArray)
         , bench "Equality worst case" <|
-            equality sampleArray (Array.foldl (\v acc -> Array.push v acc) Array.empty sampleArray)
+            equality sampleArray equalButDifferentSample
         ]
 
 
