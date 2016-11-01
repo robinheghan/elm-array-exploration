@@ -5,14 +5,14 @@ var _Skinney$elm_array_exploration$Native_JsArray = function() {
 var empty = [];
 
 function singleton(val) {
-    return [val];
+    return [_elm_lang$core$Maybe$Just(val)];
 }
 
 function initialize(size, offset, f) {
     var res = new Array(size);
 
     for (var i = 0; i < size; i++) {
-        res[i] = f(offset + i);
+        res[i] = _elm_lang$core$Maybe$Just(f(offset + i));
     }
 
     return res;
@@ -27,7 +27,7 @@ function get(idx, arr) {
         return _elm_lang$core$Maybe$Nothing;
     }
 
-    return _elm_lang$core$Maybe$Just(arr[idx]);
+    return arr[idx];
 }
 
 function set(idx, val, arr) {
@@ -36,13 +36,13 @@ function set(idx, val, arr) {
     }
 
     var copy = arr.slice();
-    copy[idx] = val;
+    copy[idx] = _elm_lang$core$Maybe$Just(val);
     return copy;
 }
 
 function push(val, arr) {
     var copy = arr.slice();
-    copy.push(val);
+    copy.push(_elm_lang$core$Maybe$Just(val));
     return copy;
 }
 
@@ -51,7 +51,7 @@ function foldl(f, init, arr) {
         len = arr.length;
 
     for (var i = 0; i < len; i++) {
-        a = A2(f, arr[i], a);
+        a = A2(f, arr[i]._0, a);
     }
 
     return a;
@@ -61,7 +61,7 @@ function foldr(f, init, arr) {
     var a = init;
 
     for (var i = arr.length - 1; i >= 0; i--) {
-        a = A2(f, arr[i], a);
+        a = A2(f, arr[i]._0, a);
     }
 
     return a;
@@ -72,7 +72,7 @@ function map(f, arr) {
         copy = new Array(len);
 
     for (var i = 0; i < len; i++) {
-        copy[i] = f(arr[i]);
+        copy[i] = _elm_lang$core$Maybe$Just(f(arr[i]._0));
     }
 
     return copy;
