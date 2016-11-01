@@ -105,55 +105,52 @@ createSuite n =
         equalButDifferentSample =
             buildByInitialize n ()
     in
-        [ {- bench "Build by push" <|
-                 buildByPush sampleList
-             , bench "Build by initialize" <|
-                 buildByInitialize n
-             , bench "Set" <|
-                 set sampleArray
-             , bench "Push" <|
-                 push sampleArray
-             ,
-          -}
-          bench "Get" <|
+        [ bench "Build by push" <|
+            buildByPush sampleList
+        , bench "Build by initialize" <|
+            buildByInitialize n
+        , bench "Set" <|
+            set sampleArray
+        , bench "Push" <|
+            push sampleArray
+        , bench "Get" <|
             get sampleArray
-          {- , bench "Append" <|
-                 append sampleArray sampleArray
-             , bench "Slice from beginning minor" <|
-                 slice 3 n sampleArray
-             , bench "Slice from beginning mayor" <|
-                 slice (n // 2) n sampleArray
-             , bench "Slice from end minor" <|
-                 slice 0 -3 sampleArray
-             , bench "Slice from end mayor" <|
-                 slice 0 (n // 2) sampleArray
-             , bench "Slice from both minor" <|
-                 slice 3 -3 sampleArray
-             , bench "Slice from both mayor" <|
-                 slice ((n // 2) - 10) (n // 2) sampleArray
-             , bench "Foldl" <|
-                 foldl sampleArray
-             , bench "Foldr" <|
-                 foldr sampleArray
-             , bench "Filter" <|
-                 filter sampleArray
-             , bench "Map" <|
-                 map sampleArray
-             , bench "Indexed Map" <|
-                 indexedMap sampleArray
-             , bench "To List" <|
-                 toList sampleArray
-             , bench "From List" <|
-                 fromList sampleList
-             , bench "Indexed List" <|
-                 indexedList sampleArray
-             , bench "Equality" <|
-                 equality sampleArray (Array.set 5 5 sampleArray)
-             , bench "Equality fail" <|
-                 equality sampleArray (Array.set 5 7 sampleArray)
-             , bench "Equality worst case" <|
-                 equality sampleArray equalButDifferentSample
-          -}
+        , bench "Append" <|
+            append sampleArray sampleArray
+        , bench "Slice from beginning minor" <|
+            slice 3 n sampleArray
+        , bench "Slice from beginning mayor" <|
+            slice (n // 2) n sampleArray
+        , bench "Slice from end minor" <|
+            slice 0 -3 sampleArray
+        , bench "Slice from end mayor" <|
+            slice 0 (n // 2) sampleArray
+        , bench "Slice from both minor" <|
+            slice 3 -3 sampleArray
+        , bench "Slice from both mayor" <|
+            slice ((n // 2) - 10) (n // 2) sampleArray
+        , bench "Foldl" <|
+            foldl sampleArray
+        , bench "Foldr" <|
+            foldr sampleArray
+        , bench "Filter" <|
+            filter sampleArray
+        , bench "Map" <|
+            map sampleArray
+        , bench "Indexed Map" <|
+            indexedMap sampleArray
+        , bench "To List" <|
+            toList sampleArray
+        , bench "From List" <|
+            fromList sampleList
+        , bench "Indexed List" <|
+            indexedList sampleArray
+        , bench "Equality" <|
+            equality sampleArray (Array.set 5 5 sampleArray)
+        , bench "Equality fail" <|
+            equality sampleArray (Array.set 5 7 sampleArray)
+        , bench "Equality worst case" <|
+            equality sampleArray equalButDifferentSample
         ]
 
 
