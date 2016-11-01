@@ -6,6 +6,7 @@ module Array.JsArray
         , initialize
         , length
         , get
+        , unsafeGet
         , set
         , push
         , foldl
@@ -45,6 +46,11 @@ length =
 get : Int -> JsArray a -> Maybe a
 get =
     Native.JsArray.get
+
+
+unsafeGet : Int -> JsArray a -> a
+unsafeGet =
+    Native.JsArray.unsafeGet
 
 
 set : Int -> a -> JsArray a -> JsArray a

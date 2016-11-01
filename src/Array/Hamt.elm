@@ -333,17 +333,12 @@ getRecursive shift idx tree =
         pos =
             Bitwise.and 0x1F <| Bitwise.shiftRightZfBy shift idx
     in
-        case JsArray.get pos tree of
-            Just x ->
-                case x of
-                    SubTree subTree ->
-                        getRecursive (shift - 5) idx subTree
+        case JsArray.unsafeGet pos tree of
+            SubTree subTree ->
+                getRecursive (shift - 5) idx subTree
 
-                    Leaf values ->
-                        JsArray.get (Bitwise.and 0x1F idx) values
-
-            Nothing ->
-                Debug.crash crashMsg
+            Leaf values ->
+                JsArray.get (Bitwise.and 0x1F idx) values
 
 
 {-| Set the element at a particular index. Returns an updated array.
@@ -375,25 +370,20 @@ setRecursive shift idx val tree =
         pos =
             Bitwise.and 0x1F <| Bitwise.shiftRightZfBy shift idx
     in
-        case JsArray.get pos tree of
-            Just x ->
-                case x of
-                    SubTree subTree ->
-                        let
-                            newSub =
-                                setRecursive (shift - 5) idx val subTree
-                        in
-                            JsArray.set pos (SubTree newSub) tree
+        case JsArray.unsafeGet pos tree of
+            SubTree subTree ->
+                let
+                    newSub =
+                        setRecursive (shift - 5) idx val subTree
+                in
+                    JsArray.set pos (SubTree newSub) tree
 
-                    Leaf values ->
-                        let
-                            newLeaf =
-                                JsArray.set (Bitwise.and 0x1F idx) val values
-                        in
-                            JsArray.set pos (Leaf newLeaf) tree
-
-            Nothing ->
-                Debug.crash crashMsg
+            Leaf values ->
+                let
+                    newLeaf =
+                        JsArray.set (Bitwise.and 0x1F idx) val values
+                in
+                    JsArray.set pos (Leaf newLeaf) tree
 
 
 {-| Reduce an array from the right. Read `foldr` as fold from the right.
@@ -645,78 +635,62 @@ sliceRight end arr =
                     pos =
                         Bitwise.and 0x1F <| Bitwise.shiftRightZfBy shift endIdx
                 in
-                    case JsArray.get pos tree of
-                        Just x ->
-                            case x of
-                                SubTree sub ->
-                                    fetchNewTail (shift - 5) sub
+                    case JsArray.unsafeGet pos tree of
+                        SubTree sub ->
+                            fetchNewTail (shift - 5) sub
 
-                                Leaf values ->
-                                    JsArray.slice 0 (Bitwise.and 0x1F end) values
-
-                        Nothing ->
-                            Debug.crash crashMsg
+                        Leaf values ->
+                            JsArray.slice 0 (Bitwise.and 0x1F end) values
 
             sliceTree shift tree =
                 let
                     lastPos =
                         Bitwise.and 0x1F <| Bitwise.shiftRightZfBy shift endIdx
                 in
-                    case JsArray.get lastPos tree of
-                        Just x ->
-                            case x of
-                                SubTree sub ->
-                                    let
-                                        newSub =
-                                            sliceTree (shift - 5) sub
-                                    in
-                                        case JsArray.length newSub of
-                                            0 ->
-                                                JsArray.slice 0 lastPos tree
+                    case JsArray.unsafeGet lastPos tree of
+                        SubTree sub ->
+                            let
+                                newSub =
+                                    sliceTree (shift - 5) sub
+                            in
+                                case JsArray.length newSub of
+                                    0 ->
+                                        JsArray.slice 0 lastPos tree
 
-                                            1 ->
-                                                case JsArray.get 0 newSub of
-                                                    Just x ->
-                                                        case x of
-                                                            SubTree _ ->
-                                                                tree
-                                                                    |> JsArray.slice 0 (lastPos + 1)
-                                                                    |> JsArray.set lastPos (SubTree newSub)
+                                    1 ->
+                                        let
+                                            val =
+                                                JsArray.unsafeGet 0 newSub
+                                        in
+                                            case val of
+                                                SubTree _ ->
+                                                    tree
+                                                        |> JsArray.slice 0 (lastPos + 1)
+                                                        |> JsArray.set lastPos (SubTree newSub)
 
-                                                            Leaf _ ->
-                                                                tree
-                                                                    |> JsArray.slice 0 (lastPos + 1)
-                                                                    |> JsArray.set lastPos x
+                                                Leaf _ ->
+                                                    tree
+                                                        |> JsArray.slice 0 (lastPos + 1)
+                                                        |> JsArray.set lastPos val
 
-                                                    Nothing ->
-                                                        Debug.crash crashMsg
+                                    _ ->
+                                        tree
+                                            |> JsArray.slice 0 (lastPos + 1)
+                                            |> JsArray.set lastPos (SubTree newSub)
 
-                                            _ ->
-                                                tree
-                                                    |> JsArray.slice 0 (lastPos + 1)
-                                                    |> JsArray.set lastPos (SubTree newSub)
-
-                                Leaf _ ->
-                                    JsArray.slice 0 lastPos tree
-
-                        Nothing ->
-                            Debug.crash crashMsg
+                        Leaf _ ->
+                            JsArray.slice 0 lastPos tree
 
             hoistTree oldShift newShift tree =
                 if oldShift <= newShift then
                     tree
                 else
-                    case JsArray.get 0 tree of
-                        Just x ->
-                            case x of
-                                SubTree sub ->
-                                    hoistTree (oldShift - 5) newShift sub
+                    case JsArray.unsafeGet 0 tree of
+                        SubTree sub ->
+                            hoistTree (oldShift - 5) newShift sub
 
-                                Leaf _ ->
-                                    tree
-
-                        Nothing ->
-                            Debug.crash crashMsg
+                        Leaf _ ->
+                            tree
         in
             { length = end
             , startShift = newShift

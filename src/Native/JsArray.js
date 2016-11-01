@@ -30,6 +30,10 @@ function get(idx, arr) {
     return _elm_lang$core$Maybe$Just(arr[idx]);
 }
 
+function unsafeGet(idx, arr) {
+    return arr[idx];
+}
+
 function set(idx, val, arr) {
     if (idx < 0 || idx >= arr.length) {
         return arr;
@@ -107,6 +111,7 @@ return {
     initialize: F3(initialize),
     length: length,
     get: F2(get),
+    unsafeGet: F2(unsafeGet),
     set: F3(set),
     push: F2(push),
     foldl: F3(foldl),
