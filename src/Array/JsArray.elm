@@ -4,6 +4,7 @@ module Array.JsArray
         , empty
         , singleton
         , initialize
+        , statefulInitialize
         , length
         , get
         , unsafeGet
@@ -23,6 +24,10 @@ type JsArray a
     = JsArray a
 
 
+type alias State a b =
+    ( Maybe a, b )
+
+
 empty : JsArray a
 empty =
     Native.JsArray.empty
@@ -36,6 +41,11 @@ singleton =
 initialize : Int -> Int -> (Int -> a) -> JsArray a
 initialize =
     Native.JsArray.initialize
+
+
+statefulInitialize : State a b -> (State a b -> State a b) -> Int -> ( State a b, JsArray a )
+statefulInitialize =
+    Native.JsArray.statefulInit
 
 
 length : JsArray a -> Int

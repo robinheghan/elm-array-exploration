@@ -186,6 +186,54 @@ initializeTree subTreeSize startIndex stopIndex f =
                 SubTree <| JsArray.initialize numberOfSubTrees 0 helper
 
 
+statefulInitialize : ( Maybe a, b ) -> (( Maybe a, b ) -> ( Maybe a, b )) -> Array a -> Array a
+statefulInitialize state f arr =
+    let
+        ( newState, newTail ) =
+            JsArray.statefulInitialize state f 32
+
+        tailLen =
+            JsArray.length newTail
+
+        newLen =
+            arr.length + tailLen
+
+        overflow =
+            (Bitwise.shiftRightZfBy 5 newLen) >= (Bitwise.shiftLeftBy arr.startShift 1)
+
+        newTree =
+            if tailLen == 32 then
+                tailPush arr.startShift arr.length newTail arr.tree
+            else
+                arr.tree
+
+        newArray =
+            { length = newLen
+            , startShift =
+                if overflow then
+                    arr.startShift + 5
+                else
+                    arr.startShift
+            , tree =
+                if overflow then
+                    JsArray.singleton (SubTree newTree)
+                else
+                    newTree
+            , tail =
+                if tailLen == 32 then
+                    JsArray.empty
+                else
+                    newTail
+            }
+    in
+        case Tuple.first newState of
+            Just _ ->
+                statefulInitialize newState f newArray
+
+            Nothing ->
+                newArray
+
+
 {-| Creates an array with a given length, filled with a default element.
 
     repeat 5 0     == fromList [0,0,0,0,0]
@@ -202,7 +250,21 @@ repeat n e =
 -}
 fromList : List a -> Array a
 fromList ls =
-    List.foldl push empty ls
+    let
+        helper ( _, ls ) =
+            case ls of
+                x :: xs ->
+                    ( Just x, xs )
+
+                [] ->
+                    ( Nothing, [] )
+    in
+        case ls of
+            x :: xs ->
+                statefulInitialize ( Just x, xs ) helper empty
+
+            [] ->
+                empty
 
 
 {-| Create a list of elements from an array.

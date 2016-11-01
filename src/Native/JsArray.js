@@ -18,6 +18,25 @@ function initialize(size, offset, f) {
     return res;
 }
 
+function statefulInit(state, f, max) {
+    var res = [];
+
+    for (var i = 0; i < max; i++) {
+        if (state._0 === _elm_lang$core$Maybe$Nothing) {
+            break;
+        }
+
+        res.push(state._0);
+        state = f(state);
+    }
+
+    return {
+        ctor: '_Tuple2',
+        _0: state,
+        _1: res
+    };
+}
+
 function length(arr) {
     return arr.length;
 }
@@ -109,6 +128,7 @@ return {
     empty: empty,
     singleton: singleton,
     initialize: F3(initialize),
+    statefulInit: F3(statefulInit),
     length: length,
     get: F2(get),
     unsafeGet: F2(unsafeGet),
