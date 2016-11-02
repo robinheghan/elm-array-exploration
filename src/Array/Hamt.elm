@@ -562,11 +562,14 @@ filter f arr =
     let
         helper n acc =
             if f n then
-                push n acc
+                n :: acc
             else
                 acc
+
+        valuesToAdd =
+            foldr helper [] arr
     in
-        foldl helper empty arr
+        fromList valuesToAdd
 
 
 {-| Apply a function on every element in an array.
