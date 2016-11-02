@@ -186,11 +186,35 @@ initializeTree subTreeSize startIndex stopIndex f =
                 SubTree <| JsArray.initialize numberOfSubTrees 0 helper
 
 
-statefulInitialize : ( Maybe a, b ) -> (( Maybe a, b ) -> ( Maybe a, b )) -> Array a -> Array a
-statefulInitialize state f arr =
+{-| Creates an array with a given length, filled with a default element.
+
+    repeat 5 0     == fromList [0,0,0,0,0]
+    repeat 3 "cat" == fromList ["cat","cat","cat"]
+
+Notice that `repeat 3 x` is the same as `initialize 3 (always x)`.
+-}
+repeat : Int -> a -> Array a
+repeat n e =
+    initialize n (always e)
+
+
+{-| Create an array from a list.
+-}
+fromList : List a -> Array a
+fromList ls =
+    case ls of
+        [] ->
+            empty
+
+        _ ->
+            fromListHelp ls empty
+
+
+fromListHelp : List a -> Array a -> Array a
+fromListHelp list arr =
     let
-        ( newState, newTail ) =
-            JsArray.statefulInitialize state f 32
+        ( newList, newTail ) =
+            JsArray.listInitialize list 32
 
         tailLen =
             JsArray.length newTail
@@ -226,45 +250,12 @@ statefulInitialize state f arr =
                     newTail
             }
     in
-        case Tuple.first newState of
-            Just _ ->
-                statefulInitialize newState f newArray
-
-            Nothing ->
+        case newList of
+            [] ->
                 newArray
 
-
-{-| Creates an array with a given length, filled with a default element.
-
-    repeat 5 0     == fromList [0,0,0,0,0]
-    repeat 3 "cat" == fromList ["cat","cat","cat"]
-
-Notice that `repeat 3 x` is the same as `initialize 3 (always x)`.
--}
-repeat : Int -> a -> Array a
-repeat n e =
-    initialize n (always e)
-
-
-{-| Create an array from a list.
--}
-fromList : List a -> Array a
-fromList ls =
-    let
-        helper ( _, ls ) =
-            case ls of
-                x :: xs ->
-                    ( Just x, xs )
-
-                [] ->
-                    ( Nothing, [] )
-    in
-        case ls of
-            x :: xs ->
-                statefulInitialize ( Just x, xs ) helper empty
-
-            [] ->
-                empty
+            _ ->
+                fromListHelp newList newArray
 
 
 {-| Create a list of elements from an array.

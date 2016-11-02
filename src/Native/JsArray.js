@@ -1,3 +1,5 @@
+// import Maybe
+
 var _Skinney$elm_array_exploration$Native_JsArray = function() {
 /* A thin, but still immutable, wrapper over native Javascript arrays. */
 
@@ -18,21 +20,21 @@ function initialize(size, offset, f) {
     return res;
 }
 
-function statefulInit(state, f, max) {
+function listInitialize(ls, max) {
     var res = [];
 
     for (var i = 0; i < max; i++) {
-        if (state._0 === _elm_lang$core$Maybe$Nothing) {
+        if (ls.ctor === '[]') {
             break;
         }
 
-        res.push(state._0);
-        state = f(state);
+        res.push(ls._0);
+        ls = ls._1;
     }
 
     return {
         ctor: '_Tuple2',
-        _0: state,
+        _0: ls,
         _1: res
     };
 }
@@ -128,7 +130,7 @@ return {
     empty: empty,
     singleton: singleton,
     initialize: F3(initialize),
-    statefulInit: F3(statefulInit),
+    listInitialize: F2(listInitialize),
     length: length,
     get: F2(get),
     unsafeGet: F2(unsafeGet),
