@@ -375,12 +375,12 @@ get idx arr =
     if idx < 0 || idx >= arr.length then
         Nothing
     else if idx >= tailPrefix arr.length then
-        JsArray.get (Bitwise.and 0x1F idx) arr.tail
+        Just <| JsArray.unsafeGet (Bitwise.and 0x1F idx) arr.tail
     else
-        getRecursive arr.startShift idx arr.tree
+        Just <| getRecursive arr.startShift idx arr.tree
 
 
-getRecursive : Int -> Int -> Tree a -> Maybe a
+getRecursive : Int -> Int -> Tree a -> a
 getRecursive shift idx tree =
     let
         pos =
@@ -391,7 +391,7 @@ getRecursive shift idx tree =
                 getRecursive (shift - 5) idx subTree
 
             Leaf values ->
-                JsArray.get (Bitwise.and 0x1F idx) values
+                JsArray.unsafeGet (Bitwise.and 0x1F idx) values
 
 
 {-| Set the element at a particular index. Returns an updated array.
