@@ -69,11 +69,6 @@ type alias Tree a =
     JsArray (Node a)
 
 
-crashMsg : String
-crashMsg =
-    "This is a bug. Please report this."
-
-
 {-| Return an empty array.
 
     length empty == 0
@@ -374,10 +369,16 @@ get : Int -> Array a -> Maybe a
 get idx arr =
     if idx < 0 || idx >= arr.length then
         Nothing
-    else if idx >= tailPrefix arr.length then
-        Just <| JsArray.unsafeGet (Bitwise.and 0x1F idx) arr.tail
     else
-        Just <| getRecursive arr.startShift idx arr.tree
+        Just <| unsafeGet idx arr
+
+
+unsafeGet : Int -> Array a -> a
+unsafeGet idx arr =
+    if idx >= tailPrefix arr.length then
+        JsArray.unsafeGet (Bitwise.and 0x1F idx) arr.tail
+    else
+        getRecursive arr.startShift idx arr.tree
 
 
 getRecursive : Int -> Int -> Tree a -> a
@@ -593,12 +594,7 @@ indexedMap : (Int -> a -> b) -> Array a -> Array b
 indexedMap f arr =
     let
         helper idx =
-            case get idx arr of
-                Just x ->
-                    f idx x
-
-                Nothing ->
-                    Debug.crash crashMsg
+            f idx <| unsafeGet idx arr
     in
         initialize arr.length helper
 
@@ -636,12 +632,7 @@ slice from to arr =
                     correctTo - correctFrom
 
                 helper i =
-                    case get (i + correctFrom) arr of
-                        Just x ->
-                            x
-
-                        Nothing ->
-                            Debug.crash crashMsg
+                    unsafeGet (i + correctFrom) arr
             in
                 initialize len helper
         else
