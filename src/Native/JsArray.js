@@ -21,16 +21,19 @@ function initialize(size, offset, f) {
 }
 
 function listInitialize(ls, max) {
-    var res = [];
+    var res = new Array(max);
+    var i = 0;
 
-    for (var i = 0; i < max; i++) {
+    for (; i < max; i++) {
         if (ls.ctor === '[]') {
             break;
         }
 
-        res.push(ls._0);
+        res[i] = ls._0;
         ls = ls._1;
     }
+
+    res.length = i;
 
     return {
         ctor: '_Tuple2',
@@ -60,15 +63,26 @@ function set(idx, val, arr) {
         return arr;
     }
 
-    var copy = arr.slice();
-    copy[idx] = val;
-    return copy;
+    var res = copy(arr, 0);
+    res[idx] = val;
+    return res;
+}
+
+function copy(arr, offset) {
+    var len = arr.length,
+        res = new Array(len + offset);
+
+    for (var i = 0; i < len; i++) {
+        res[i] = arr[i];
+    }
+
+    return res;
 }
 
 function push(val, arr) {
-    var copy = arr.slice();
-    copy.push(val);
-    return copy;
+    var res = copy(arr, 1);
+    res[arr.length] = val;
+    return res;
 }
 
 function foldl(f, init, arr) {
@@ -111,8 +125,7 @@ function merge(dest, source, max) {
     var destLen = dest.length,
         toCopy = max - destLen,
         sourceStop = toCopy > source.length ? source.length : toCopy,
-        combinedLen = destLen + source.length,
-        len = combinedLen > max ? max : combinedLen,
+        len = destLen + sourceStop,
         arr = new Array(len);
 
     for (var i = 0; i < destLen; i++) {
