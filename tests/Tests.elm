@@ -33,10 +33,10 @@ initTests =
         [ fuzz defaultSizeRange "initialize" <|
             \size ->
                 toList (initialize size identity)
-                    |> Expect.equal [0..(size - 1)]
+                    |> Expect.equal (List.range 0 (size - 1))
         , fuzz defaultSizeRange "push" <|
             \size ->
-                List.foldl push empty [0..(size - 1)]
+                List.foldl push empty (List.range 0 (size - 1))
                     |> Expect.equal (initialize size identity)
         , test "initialize non-identity" <|
             \() ->
@@ -166,7 +166,7 @@ conversionTests =
             \size ->
                 let
                     ls =
-                        [0..(size - 1)]
+                        List.range 0 (size - 1)
                 in
                     toList (fromList ls)
                         |> Expect.equal ls
@@ -183,15 +183,15 @@ transformTests =
         [ fuzz defaultSizeRange "foldl" <|
             \size ->
                 foldl (::) [] (initialize size identity)
-                    |> Expect.equal (List.reverse [0..(size - 1)])
+                    |> Expect.equal (List.reverse (List.range 0 (size - 1)))
         , fuzz defaultSizeRange "foldr" <|
             \size ->
                 foldr (\n acc -> n :: acc) [] (initialize size identity)
-                    |> Expect.equal [0..(size - 1)]
+                    |> Expect.equal (List.range 0 (size - 1))
         , fuzz defaultSizeRange "filter" <|
             \size ->
                 toList (filter (\a -> a % 2 == 0) (initialize size identity))
-                    |> Expect.equal (List.filter (\a -> a % 2 == 0) [0..(size - 1)])
+                    |> Expect.equal (List.filter (\a -> a % 2 == 0) (List.range 0 (size - 1)))
         , fuzz defaultSizeRange "map" <|
             \size ->
                 map ((+) 1) (initialize size identity)
@@ -215,7 +215,7 @@ sliceTests : Test
 sliceTests =
     let
         smallSample =
-            fromList [1..8]
+            fromList (List.range 1 8)
     in
         describe "Slice"
             [ fuzz2 (intRange -50 -1) (intRange 100 33000) "both" <|
@@ -237,15 +237,15 @@ sliceTests =
             , test "both small" <|
                 \() ->
                     toList (slice 2 5 smallSample)
-                        |> Expect.equal [3..5]
+                        |> Expect.equal (List.range 3 5)
             , test "start small" <|
                 \() ->
                     toList (slice 2 (length smallSample) smallSample)
-                        |> Expect.equal [3..8]
+                        |> Expect.equal (List.range 3 8)
             , test "negative" <|
                 \() ->
                     toList (slice -5 -2 smallSample)
-                        |> Expect.equal [4..6]
+                        |> Expect.equal (List.range 4 6)
             , test "impossible" <|
                 \() ->
                     toList (slice -1 -2 smallSample)
@@ -272,7 +272,7 @@ runtimeCrashTests =
             \() ->
                 let
                     ary =
-                        fromList [0..32]
+                        fromList <| List.range 0 32
 
                     res =
                         append (slice 1 32 ary) (slice (32 + 1) -1 ary)
