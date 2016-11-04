@@ -7,17 +7,17 @@ module Array.Hamt
         , initialize
         , repeat
         , fromList
-        , toList
-        , toIndexedList
-        , push
         , get
         , set
+        , push
+        , toList
+        , toIndexedList
         , foldr
         , foldl
-        , append
         , filter
         , map
         , indexedMap
+        , append
         , slice
         )
 
@@ -28,7 +28,7 @@ same type.
 @docs Array
 
 # Creation
-@docs empty, repeat, initialize, fromList
+@docs empty, initialize, repeat, fromList
 
 # Query
 @docs isEmpty, length, get
@@ -40,7 +40,7 @@ same type.
 @docs toList, toIndexedList
 
 # Transform
-@docs map, indexedMap, filter, foldl, foldr
+@docs foldl, foldr, filter, map, indexedMap
 -}
 
 import Bitwise
@@ -141,7 +141,7 @@ initialize stop f =
                     stopIndex =
                         min (startIndex + subTreeSize) treeLen
                 in
-                    initializeTree nextSubTreeSize startIndex stopIndex f
+                    initializeHelp nextSubTreeSize startIndex stopIndex f
         in
             { length = stop
             , startShift = requiredTreeHeight * 5
@@ -152,8 +152,8 @@ initialize stop f =
             }
 
 
-initializeTree : Int -> Int -> Int -> (Int -> a) -> Node a
-initializeTree subTreeSize startIndex stopIndex f =
+initializeHelp : Int -> Int -> Int -> (Int -> a) -> Node a
+initializeHelp subTreeSize startIndex stopIndex f =
     let
         len =
             stopIndex - startIndex
@@ -176,7 +176,7 @@ initializeTree subTreeSize startIndex stopIndex f =
                         stop =
                             min (start + subTreeSize) stopIndex
                     in
-                        initializeTree nextSubTreeSize start stop f
+                        initializeHelp nextSubTreeSize start stop f
             in
                 SubTree <| JsArray.initialize numberOfSubTrees 0 helper
 
@@ -253,30 +253,91 @@ fromListHelp list arr =
                 fromListHelp newList newArray
 
 
-{-| Create a list of elements from an array.
+{-| Return Just the element at the index or Nothing if the index is out of range.
 
-    toList (fromList [3,5,8]) == [3,5,8]
+    get  0 (fromList [0,1,2]) == Just 0
+    get  2 (fromList [0,1,2]) == Just 2
+    get  5 (fromList [0,1,2]) == Nothing
+    get -1 (fromList [0,1,2]) == Nothing
 -}
-toList : Array a -> List a
-toList arr =
-    foldr (::) [] arr
+get : Int -> Array a -> Maybe a
+get idx arr =
+    if idx < 0 || idx >= arr.length then
+        Nothing
+    else
+        Just <| unsafeGet idx arr
 
 
-{-| Create an indexed list from an array. Each element of the array will be
-paired with its index.
-
-    toIndexedList (fromList ["cat","dog"]) == [(0,"cat"), (1,"dog")]
+{-| Only use this if you know what you are doing!
 -}
-toIndexedList : Array a -> List ( Int, a )
-toIndexedList arr =
+unsafeGet : Int -> Array a -> a
+unsafeGet idx arr =
+    if idx >= tailPrefix arr.length then
+        JsArray.unsafeGet (Bitwise.and 0x1F idx) arr.tail
+    else
+        getHelp arr.startShift idx arr.tree
+
+
+getHelp : Int -> Int -> Tree a -> a
+getHelp shift idx tree =
     let
-        helper n ( idx, ls ) =
-            ( idx - 1, ( idx, n ) :: ls )
+        pos =
+            Bitwise.and 0x1F <| Bitwise.shiftRightZfBy shift idx
     in
-        Tuple.second <| foldr helper ( length arr - 1, [] ) arr
+        case JsArray.unsafeGet pos tree of
+            SubTree subTree ->
+                getHelp (shift - 5) idx subTree
+
+            Leaf values ->
+                JsArray.unsafeGet (Bitwise.and 0x1F idx) values
 
 
-{-| Push an element to the end of an array.
+{-| Set the element at a particular index. Returns an updated array.
+If the index is out of range, the array is unaltered.
+
+    set 1 7 (fromList [1,2,3]) == fromList [1,7,3]
+-}
+set : Int -> a -> Array a -> Array a
+set idx val arr =
+    if idx < 0 || idx >= arr.length then
+        arr
+    else if idx >= tailPrefix arr.length then
+        { length = arr.length
+        , startShift = arr.startShift
+        , tree = arr.tree
+        , tail = JsArray.set (Bitwise.and 0x1F idx) val arr.tail
+        }
+    else
+        { length = arr.length
+        , startShift = arr.startShift
+        , tree = setHelp arr.startShift idx val arr.tree
+        , tail = arr.tail
+        }
+
+
+setHelp : Int -> Int -> a -> Tree a -> Tree a
+setHelp shift idx val tree =
+    let
+        pos =
+            Bitwise.and 0x1F <| Bitwise.shiftRightZfBy shift idx
+    in
+        case JsArray.unsafeGet pos tree of
+            SubTree subTree ->
+                let
+                    newSub =
+                        setHelp (shift - 5) idx val subTree
+                in
+                    JsArray.set pos (SubTree newSub) tree
+
+            Leaf values ->
+                let
+                    newLeaf =
+                        JsArray.set (Bitwise.and 0x1F idx) val values
+                in
+                    JsArray.set pos (Leaf newLeaf) tree
+
+
+{-| Push an element onto the end of an array.
 
     push 3 (fromList [1,2]) == fromList [1,2,3]
 -}
@@ -320,6 +381,8 @@ push a arr =
         }
 
 
+{-| Place the given node at the correct position in the tree
+-}
 tailPush : Int -> Int -> JsArray a -> Tree a -> Tree a
 tailPush shift idx tail tree =
     let
@@ -348,6 +411,8 @@ tailPush shift idx tail tree =
                 JsArray.push (Leaf tail) tree
 
 
+{-| Given an array length, return the index of the first element in the tail.
+-}
 tailPrefix : Int -> Int
 tailPrefix len =
     if len < 32 then
@@ -358,86 +423,27 @@ tailPrefix len =
             |> Bitwise.shiftLeftBy 5
 
 
-{-| Return Just the element at the index or Nothing if the index is out of range.
+{-| Create a list of elements from an array.
 
-    get  0 (fromList [0,1,2]) == Just 0
-    get  2 (fromList [0,1,2]) == Just 2
-    get  5 (fromList [0,1,2]) == Nothing
-    get -1 (fromList [0,1,2]) == Nothing
+    toList (fromList [3,5,8]) == [3,5,8]
 -}
-get : Int -> Array a -> Maybe a
-get idx arr =
-    if idx < 0 || idx >= arr.length then
-        Nothing
-    else
-        Just <| unsafeGet idx arr
+toList : Array a -> List a
+toList arr =
+    foldr (::) [] arr
 
 
-unsafeGet : Int -> Array a -> a
-unsafeGet idx arr =
-    if idx >= tailPrefix arr.length then
-        JsArray.unsafeGet (Bitwise.and 0x1F idx) arr.tail
-    else
-        getRecursive arr.startShift idx arr.tree
+{-| Create an indexed list from an array. Each element of the array will be
+paired with its index.
 
-
-getRecursive : Int -> Int -> Tree a -> a
-getRecursive shift idx tree =
-    let
-        pos =
-            Bitwise.and 0x1F <| Bitwise.shiftRightZfBy shift idx
-    in
-        case JsArray.unsafeGet pos tree of
-            SubTree subTree ->
-                getRecursive (shift - 5) idx subTree
-
-            Leaf values ->
-                JsArray.unsafeGet (Bitwise.and 0x1F idx) values
-
-
-{-| Set the element at a particular index. Returns an updated array.
-If the index is out of range, the array is unaltered.
-
-    set 1 7 (fromList [1,2,3]) == fromList [1,7,3]
+    toIndexedList (fromList ["cat","dog"]) == [(0,"cat"), (1,"dog")]
 -}
-set : Int -> a -> Array a -> Array a
-set idx val arr =
-    if idx < 0 || idx >= arr.length then
-        arr
-    else if idx >= tailPrefix arr.length then
-        { length = arr.length
-        , startShift = arr.startShift
-        , tree = arr.tree
-        , tail = JsArray.set (Bitwise.and 0x1F idx) val arr.tail
-        }
-    else
-        { length = arr.length
-        , startShift = arr.startShift
-        , tree = setRecursive arr.startShift idx val arr.tree
-        , tail = arr.tail
-        }
-
-
-setRecursive : Int -> Int -> a -> Tree a -> Tree a
-setRecursive shift idx val tree =
+toIndexedList : Array a -> List ( Int, a )
+toIndexedList arr =
     let
-        pos =
-            Bitwise.and 0x1F <| Bitwise.shiftRightZfBy shift idx
+        helper n ( idx, ls ) =
+            ( idx - 1, ( idx, n ) :: ls )
     in
-        case JsArray.unsafeGet pos tree of
-            SubTree subTree ->
-                let
-                    newSub =
-                        setRecursive (shift - 5) idx val subTree
-                in
-                    JsArray.set pos (SubTree newSub) tree
-
-            Leaf values ->
-                let
-                    newLeaf =
-                        JsArray.set (Bitwise.and 0x1F idx) val values
-                in
-                    JsArray.set pos (Leaf newLeaf) tree
+        Tuple.second <| foldr helper ( length arr - 1, [] ) arr
 
 
 {-| Reduce an array from the right. Read `foldr` as fold from the right.
@@ -482,7 +488,59 @@ foldl f init arr =
         JsArray.foldl f tree arr.tail
 
 
-{-| Append two arrays to a new one.
+{-| Keep only elements that satisfy the predicate.
+
+    filter isEven (fromList [1..6]) == (fromList [2,4,6])
+-}
+filter : (a -> Bool) -> Array a -> Array a
+filter f arr =
+    let
+        helper n acc =
+            if f n then
+                n :: acc
+            else
+                acc
+    in
+        foldr helper [] arr
+            |> fromList
+
+
+{-| Apply a function on every element in an array.
+
+    map sqrt (fromList [1,4,9]) == fromList [1,2,3]
+-}
+map : (a -> b) -> Array a -> Array b
+map f arr =
+    let
+        helper i =
+            case i of
+                SubTree subTree ->
+                    SubTree <| JsArray.map helper subTree
+
+                Leaf values ->
+                    Leaf <| JsArray.map f values
+    in
+        { length = arr.length
+        , startShift = arr.startShift
+        , tree = JsArray.map helper arr.tree
+        , tail = JsArray.map f arr.tail
+        }
+
+
+{-| Apply a function on every element with its index as first argument.
+
+    indexedMap (*) (fromList [5,5,5]) == fromList [0,5,10]
+-}
+indexedMap : (Int -> a -> b) -> Array a -> Array b
+indexedMap f arr =
+    let
+        helper idx =
+            f idx <| unsafeGet idx arr
+    in
+        initialize arr.length helper
+
+
+{-| Append one array onto another one.
 
     append (repeat 2 42) (repeat 3 81) == fromList [42,42,81,81,81]
 -}
@@ -545,60 +603,6 @@ append a b =
             |> tailMerge b.tail
 
 
-{-| Keep only elements that satisfy the predicate:
-
-    filter isEven (fromList [1..6]) == (fromList [2,4,6])
--}
-filter : (a -> Bool) -> Array a -> Array a
-filter f arr =
-    let
-        helper n acc =
-            if f n then
-                n :: acc
-            else
-                acc
-
-        valuesToAdd =
-            foldr helper [] arr
-    in
-        fromList valuesToAdd
-
-
-{-| Apply a function on every element in an array.
-
-    map sqrt (fromList [1,4,9]) == fromList [1,2,3]
--}
-map : (a -> b) -> Array a -> Array b
-map f arr =
-    let
-        helper i =
-            case i of
-                SubTree subTree ->
-                    SubTree <| JsArray.map helper subTree
-
-                Leaf values ->
-                    Leaf <| JsArray.map f values
-    in
-        { length = arr.length
-        , startShift = arr.startShift
-        , tree = JsArray.map helper arr.tree
-        , tail = JsArray.map f arr.tail
-        }
-
-
-{-| Apply a function on every element with its index as first argument.
-
-    indexedMap (*) (fromList [5,5,5]) == fromList [0,5,10]
--}
-indexedMap : (Int -> a -> b) -> Array a -> Array b
-indexedMap f arr =
-    let
-        helper idx =
-            f idx <| unsafeGet idx arr
-    in
-        initialize arr.length helper
-
-
 {-| Get a sub-section of an array: `(slice start end array)`. The `start` is a
 zero-based index where we will start our slice. The `end` is a zero-based index
 that indicates the end of the slice. The slice extracts up to but not including
@@ -639,6 +643,12 @@ slice from to arr =
             sliceRight correctTo arr
 
 
+{-| Given a relative array index, convert it into an absolute one.
+
+    translateIndex -1 someArray == someArray.length - 1
+    translateIndex -10 someArray == someArray.length - 10
+    translateIndex 5 someArray == 5
+-}
 translateIndex : Int -> Array a -> Int
 translateIndex idx arr =
     let
@@ -656,6 +666,16 @@ translateIndex idx arr =
             posIndex
 
 
+{-| This function is an optimization for the special case when only slicing from the right.
+First, two things are tested:
+1. If the array does not need slicing, return the original array.
+2. If the array can be sliced by only slicing the tail, slice the tail.
+
+In any other case we need to do three things:
+1. Find the new tail in the tree, promote it to the tail position and slice it.
+2. Slice every sub tree.
+3. Promote leaf nodes that are the sole element of a sub tree (for equality to work).
+-}
 sliceRight : Int -> Array a -> Array a
 sliceRight end arr =
     if end == arr.length then
