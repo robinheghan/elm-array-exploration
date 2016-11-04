@@ -305,7 +305,7 @@ set idx val arr =
         { length = arr.length
         , startShift = arr.startShift
         , tree = arr.tree
-        , tail = JsArray.set (Bitwise.and 0x1F idx) val arr.tail
+        , tail = JsArray.unsafeSet (Bitwise.and 0x1F idx) val arr.tail
         }
     else
         { length = arr.length
@@ -327,14 +327,14 @@ setHelp shift idx val tree =
                     newSub =
                         setHelp (shift - 5) idx val subTree
                 in
-                    JsArray.set pos (SubTree newSub) tree
+                    JsArray.unsafeSet pos (SubTree newSub) tree
 
             Leaf values ->
                 let
                     newLeaf =
-                        JsArray.set (Bitwise.and 0x1F idx) val values
+                        JsArray.unsafeSet (Bitwise.and 0x1F idx) val values
                 in
-                    JsArray.set pos (Leaf newLeaf) tree
+                    JsArray.unsafeSet pos (Leaf newLeaf) tree
 
 
 {-| Push an element onto the end of an array.
@@ -389,26 +389,28 @@ tailPush shift idx tail tree =
         pos =
             Bitwise.and 0x1F <| Bitwise.shiftRightZfBy shift idx
     in
-        case JsArray.get pos tree of
-            Just x ->
-                case x of
+        if pos >= JsArray.length tree then
+            JsArray.push (Leaf tail) tree
+        else
+            let
+                val =
+                    JsArray.unsafeGet pos tree
+            in
+                case val of
                     SubTree subTree ->
                         let
                             newSub =
                                 tailPush (shift - 5) idx tail subTree
                         in
-                            JsArray.set pos (SubTree newSub) tree
+                            JsArray.unsafeSet pos (SubTree newSub) tree
 
                     Leaf _ ->
                         let
                             newSub =
-                                JsArray.singleton x
+                                JsArray.singleton val
                                     |> tailPush (shift - 5) idx tail
                         in
-                            JsArray.set pos (SubTree newSub) tree
-
-            Nothing ->
-                JsArray.push (Leaf tail) tree
+                            JsArray.unsafeSet pos (SubTree newSub) tree
 
 
 {-| Given an array length, return the index of the first element in the tail.
@@ -733,17 +735,17 @@ sliceRight end arr =
                                                 SubTree _ ->
                                                     tree
                                                         |> JsArray.slice 0 (lastPos + 1)
-                                                        |> JsArray.set lastPos (SubTree newSub)
+                                                        |> JsArray.unsafeSet lastPos (SubTree newSub)
 
                                                 Leaf _ ->
                                                     tree
                                                         |> JsArray.slice 0 (lastPos + 1)
-                                                        |> JsArray.set lastPos val
+                                                        |> JsArray.unsafeSet lastPos val
 
                                     _ ->
                                         tree
                                             |> JsArray.slice 0 (lastPos + 1)
-                                            |> JsArray.set lastPos (SubTree newSub)
+                                            |> JsArray.unsafeSet lastPos (SubTree newSub)
 
                         Leaf _ ->
                             JsArray.slice 0 lastPos tree

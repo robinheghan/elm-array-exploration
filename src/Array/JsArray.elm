@@ -3,12 +3,11 @@ module Array.JsArray
         ( JsArray
         , empty
         , singleton
+        , length
         , initialize
         , listInitialize
-        , length
-        , get
         , unsafeGet
-        , set
+        , unsafeSet
         , push
         , foldl
         , foldr
@@ -34,6 +33,11 @@ singleton =
     Native.JsArray.singleton
 
 
+length : JsArray a -> Int
+length =
+    Native.JsArray.length
+
+
 initialize : Int -> Int -> (Int -> a) -> JsArray a
 initialize =
     Native.JsArray.initialize
@@ -44,24 +48,14 @@ listInitialize =
     Native.JsArray.listInitialize
 
 
-length : JsArray a -> Int
-length =
-    Native.JsArray.length
-
-
-get : Int -> JsArray a -> Maybe a
-get =
-    Native.JsArray.get
-
-
 unsafeGet : Int -> JsArray a -> a
 unsafeGet =
     Native.JsArray.unsafeGet
 
 
-set : Int -> a -> JsArray a -> JsArray a
-set =
-    Native.JsArray.set
+unsafeSet : Int -> a -> JsArray a -> JsArray a
+unsafeSet =
+    Native.JsArray.unsafeSet
 
 
 push : a -> JsArray a -> JsArray a

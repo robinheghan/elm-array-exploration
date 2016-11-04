@@ -1,13 +1,14 @@
-// import Maybe
-
 var _Skinney$elm_array_exploration$Native_JsArray = function() {
-/* A thin, but still immutable, wrapper over native Javascript arrays. */
+/* A thin, but immutable, wrapper over native Javascript arrays. */
 
-// An empty array
 var empty = [];
 
 function singleton(val) {
     return [val];
+}
+
+function length(arr) {
+    return arr.length;
 }
 
 function initialize(size, offset, f) {
@@ -20,6 +21,7 @@ function initialize(size, offset, f) {
     return res;
 }
 
+// Create array from Elm list, containing at most max elements.
 function listInitialize(ls, max) {
     var res = new Array(max);
     var i = 0;
@@ -42,29 +44,21 @@ function listInitialize(ls, max) {
     };
 }
 
-function length(arr) {
-    return arr.length;
-}
-
-function get(idx, arr) {
-    if (idx < 0 || idx >= arr.length) {
-        return _elm_lang$core$Maybe$Nothing;
-    }
-
-    return _elm_lang$core$Maybe$Just(arr[idx]);
-}
-
+// No bounds checking, use with caution!
 function unsafeGet(idx, arr) {
     return arr[idx];
 }
 
-function set(idx, val, arr) {
-    if (idx < 0 || idx >= arr.length) {
-        return arr;
-    }
-
+// No bounds checking, use with caution!
+function unsafeSet(idx, val, arr) {
     var res = copy(arr, 0);
     res[idx] = val;
+    return res;
+}
+
+function push(val, arr) {
+    var res = copy(arr, 1);
+    res[arr.length] = val;
     return res;
 }
 
@@ -76,12 +70,6 @@ function copy(arr, offset) {
         res[i] = arr[i];
     }
 
-    return res;
-}
-
-function push(val, arr) {
-    var res = copy(arr, 1);
-    res[arr.length] = val;
     return res;
 }
 
@@ -121,16 +109,12 @@ function slice(from, to, arr) {
     return arr.slice(from, to);
 }
 
+// Appends dest onto source, and makes sure it has max elements.
 function merge(dest, source, max) {
     var destLen = dest.length,
         toCopy = max - destLen,
         sourceStop = toCopy > source.length ? source.length : toCopy,
-        len = destLen + sourceStop,
-        arr = new Array(len);
-
-    for (var i = 0; i < destLen; i++) {
-        arr[i] = dest[i];
-    }
+        arr = copy(dest, sourceStop);
 
     for (var i = 0; i < sourceStop; i++) {
         arr[i + destLen] = source[i];
@@ -142,12 +126,11 @@ function merge(dest, source, max) {
 return {
     empty: empty,
     singleton: singleton,
+    length: length,
     initialize: F3(initialize),
     listInitialize: F2(listInitialize),
-    length: length,
-    get: F2(get),
     unsafeGet: F2(unsafeGet),
-    set: F3(set),
+    unsafeSet: F3(unsafeSet),
     push: F2(push),
     foldl: F3(foldl),
     foldr: F3(foldr),
