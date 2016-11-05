@@ -211,39 +211,8 @@ fromListHelp list arr =
         ( newList, newTail ) =
             JsArray.listInitialize list 32
 
-        tailLen =
-            JsArray.length newTail
-
-        newLen =
-            arr.length + tailLen
-
-        overflow =
-            (Bitwise.shiftRightZfBy 5 newLen) >= (Bitwise.shiftLeftBy arr.startShift 1)
-
-        newTree =
-            if tailLen == 32 then
-                tailPush arr.startShift arr.length newTail arr.tree
-            else
-                arr.tree
-
         newArray =
-            { length = newLen
-            , startShift =
-                if overflow then
-                    arr.startShift + 5
-                else
-                    arr.startShift
-            , tree =
-                if overflow then
-                    JsArray.singleton (SubTree newTree)
-                else
-                    newTree
-            , tail =
-                if tailLen == 32 then
-                    JsArray.empty
-                else
-                    newTail
-            }
+            pushTail newTail arr
     in
         case newList of
             [] ->
@@ -346,19 +315,27 @@ push a arr =
     let
         newTail =
             JsArray.push a arr.tail
+    in
+        pushTail newTail arr
+
+
+{-| Update the tail of an array, pushing it into the tree if necessary.
+-}
+pushTail : JsArray a -> Array a -> Array a
+pushTail newTail arr =
+    let
+        tailLen =
+            JsArray.length newTail
 
         newLen =
-            arr.length + 1
+            arr.length + tailLen - JsArray.length arr.tail
 
         overflow =
             (Bitwise.shiftRightZfBy 5 newLen) >= (Bitwise.shiftLeftBy arr.startShift 1)
 
-        tailLen =
-            JsArray.length newTail
-
         newTree =
             if tailLen == 32 then
-                tailPush arr.startShift arr.length newTail arr.tree
+                pushTailHelp arr.startShift arr.length newTail arr.tree
             else
                 arr.tree
     in
@@ -381,10 +358,8 @@ push a arr =
         }
 
 
-{-| Place the given node at the correct position in the tree
--}
-tailPush : Int -> Int -> JsArray a -> Tree a -> Tree a
-tailPush shift idx tail tree =
+pushTailHelp : Int -> Int -> JsArray a -> Tree a -> Tree a
+pushTailHelp shift idx tail tree =
     let
         pos =
             Bitwise.and 0x1F <| Bitwise.shiftRightZfBy shift idx
@@ -400,7 +375,7 @@ tailPush shift idx tail tree =
                     SubTree subTree ->
                         let
                             newSub =
-                                tailPush (shift - 5) idx tail subTree
+                                pushTailHelp (shift - 5) idx tail subTree
                         in
                             JsArray.unsafeSet pos (SubTree newSub) tree
 
@@ -408,7 +383,7 @@ tailPush shift idx tail tree =
                         let
                             newSub =
                                 JsArray.singleton val
-                                    |> tailPush (shift - 5) idx tail
+                                    |> pushTailHelp (shift - 5) idx tail
                         in
                             JsArray.unsafeSet pos (SubTree newSub) tree
 
@@ -579,7 +554,7 @@ append a b =
 
                 newTree =
                     if tailLen == 32 then
-                        tailPush arr.startShift arr.length tailToInsert arr.tree
+                        pushTailHelp arr.startShift arr.length tailToInsert arr.tree
                     else
                         arr.tree
             in
@@ -730,17 +705,18 @@ sliceRight end arr =
                                         let
                                             val =
                                                 JsArray.unsafeGet 0 newSub
-                                        in
-                                            case val of
-                                                SubTree _ ->
-                                                    tree
-                                                        |> JsArray.slice 0 (lastPos + 1)
-                                                        |> JsArray.unsafeSet lastPos (SubTree newSub)
 
-                                                Leaf _ ->
-                                                    tree
-                                                        |> JsArray.slice 0 (lastPos + 1)
-                                                        |> JsArray.unsafeSet lastPos val
+                                            nodeToInsert =
+                                                case val of
+                                                    SubTree _ ->
+                                                        SubTree newSub
+
+                                                    Leaf _ ->
+                                                        val
+                                        in
+                                            tree
+                                                |> JsArray.slice 0 (lastPos + 1)
+                                                |> JsArray.unsafeSet lastPos nodeToInsert
 
                                     _ ->
                                         tree
