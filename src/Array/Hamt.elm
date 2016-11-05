@@ -233,8 +233,10 @@ get : Int -> Array a -> Maybe a
 get idx arr =
     if idx < 0 || idx >= arr.length then
         Nothing
+    else if idx >= tailPrefix arr.length then
+        Just <| JsArray.unsafeGet (Bitwise.and 0x1F idx) arr.tail
     else
-        Just <| unsafeGet idx arr
+        Just <| getHelp arr.startShift idx arr.tree
 
 
 {-| Only use this if you know what you are doing!

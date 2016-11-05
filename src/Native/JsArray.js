@@ -51,7 +51,7 @@ function unsafeGet(idx, arr) {
 
 // No bounds checking, use with caution!
 function unsafeSet(idx, val, arr) {
-    var res = copy(arr, 0);
+    var res = arr.slice();
     res[idx] = val;
     return res;
 }
