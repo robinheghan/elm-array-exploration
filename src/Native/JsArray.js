@@ -57,19 +57,8 @@ function unsafeSet(idx, val, arr) {
 }
 
 function push(val, arr) {
-    var res = copy(arr, 1);
-    res[arr.length] = val;
-    return res;
-}
-
-function copy(arr, offset) {
-    var len = arr.length,
-        res = new Array(len + offset);
-
-    for (var i = 0; i < len; i++) {
-        res[i] = arr[i];
-    }
-
+    var res = arr.slice();
+    res.push(val);
     return res;
 }
 
@@ -114,7 +103,11 @@ function merge(dest, source, max) {
     var destLen = dest.length,
         toCopy = max - destLen,
         sourceStop = toCopy > source.length ? source.length : toCopy,
-        arr = copy(dest, sourceStop);
+        arr = new Array(destLen + sourceStop);
+
+    for (var i = 0; i < destLen; i++) {
+        arr[i] = dest[i];
+    }
 
     for (var i = 0; i < sourceStop; i++) {
         arr[i + destLen] = source[i];
