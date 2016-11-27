@@ -41,6 +41,9 @@ same type.
 
 # Transform
 @docs foldl, foldr, filter, map, indexedMap
+
+# Display
+@docs toString
 -}
 
 import Bitwise
@@ -220,6 +223,19 @@ fromListHelp list arr =
 
             _ ->
                 fromListHelp newList newArray
+                
+{-| Return the array represented as a string
+    >>> toString <| Array.fromList [ 1, 2, 3]
+    "Array [ 1, 2, 3 ]
+-}
+toString : Array a -> String
+toString array =
+    let
+        elements = 
+            map toString array
+                |> String.join ", "
+    in
+        "Array [ " ++ elements ++ " ]" 
 
 
 {-| Return Just the element at the index or Nothing if the index is out of range.
