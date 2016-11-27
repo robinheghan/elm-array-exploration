@@ -226,7 +226,7 @@ fromListHelp list arr =
                 
 {-| Return the array represented as a string
     >>> toString <| Array.fromList [ 1, 2, 3]
-    "Array [ 1, 2, 3 ]
+    "Array [ 1, 2, 3 ]"
 -}
 toString : Array a -> String
 toString array =
