@@ -19,6 +19,7 @@ module Array.Hamt
         , indexedMap
         , append
         , slice
+        , toString
         )
 
 {-| Fast immutable arrays. The elements in an array must have the
@@ -223,19 +224,18 @@ fromListHelp list arr =
 
             _ ->
                 fromListHelp newList newArray
-                
+
+
 {-| Return the array represented as a string
-    >>> toString <| Array.fromList [ 1, 2, 3]
-    "Array [ 1, 2, 3 ]"
+    (toString <| Array.fromList [1,2,3]) == "Array [1,2,3]"
 -}
 toString : Array a -> String
 toString array =
     let
-        elements = 
-            map toString array
-                |> String.join ", "
+        elements =
+            toList array
     in
-        "Array [ " ++ elements ++ " ]" 
+        "Array " ++ Basics.toString elements
 
 
 {-| Return Just the element at the index or Nothing if the index is out of range.

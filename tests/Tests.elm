@@ -3,7 +3,7 @@ module Tests exposing (all)
 import Test exposing (Test, describe, test, fuzz, fuzz2)
 import Fuzz exposing (Fuzzer, intRange)
 import Expect
-import Array.Hamt exposing (..)
+import Array.Hamt as Array exposing (..)
 
 
 all : Test
@@ -208,6 +208,14 @@ transformTests =
             \size ->
                 append (initialize size identity) (initialize size (\idx -> idx + size))
                     |> Expect.equal (initialize (size * 2) identity)
+        , fuzz (defaultSizeRange) "toString" <|
+            \size ->
+                let
+                    ls =
+                        List.range 0 size
+                in
+                    Array.toString (fromList ls)
+                        |> Expect.equal ("Array " ++ Basics.toString ls)
         ]
 
 

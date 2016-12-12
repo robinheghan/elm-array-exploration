@@ -88,6 +88,11 @@ indexedList arr =
     \() -> Array.toIndexedList arr
 
 
+toString : Input -> () -> String
+toString arr =
+    \() -> Array.toString arr
+
+
 equality : Input -> Input -> () -> Bool
 equality a1 a2 =
     \() -> a1 == a2
@@ -145,6 +150,8 @@ createSuite n =
             fromList sampleList
         , bench "Indexed List" <|
             indexedList sampleArray
+        , bench "toString" <|
+            toString sampleArray
         , bench "Equality" <|
             equality sampleArray (Array.set 5 5 sampleArray)
         , bench "Equality fail" <|
@@ -158,7 +165,7 @@ large : BenchmarkSuite
 large =
     suite
         ("Array ("
-            ++ (toString largeArraySize)
+            ++ (Basics.toString largeArraySize)
             ++ " elements)"
         )
         (createSuite largeArraySize)
