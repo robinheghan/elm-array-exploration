@@ -7,7 +7,7 @@ for a thorough explanation the underlying implementation.
 ## Use
 
 This package is a drop-in replacement to the array implementation in Elm core.
-To use, simply `import Array.Hamt` instead of `import Array`.
+To use, simply `import Array.Hamt as Array` instead of `import Array`.
 
 ## License
 

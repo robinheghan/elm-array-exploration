@@ -1,15 +1,15 @@
 {
-    "version": "1.0.0",
+    "version": "1.1.0",
     "summary": "New Array implementation for Elm.",
     "repository": "https://github.com/Skinney/elm-array-exploration.git",
     "license": "BSD3",
-    "native-modules": true,
     "source-directories": [
         "src"
     ],
     "exposed-modules": [
         "Array.Hamt"
     ],
+    "native-modules": true,
     "dependencies": {
         "elm-lang/core": "5.0.0 <= v < 6.0.0"
     },
