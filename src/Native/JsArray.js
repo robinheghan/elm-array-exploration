@@ -1,5 +1,4 @@
 var _Skinney$elm_array_exploration$Native_JsArray = function() {
-/* A thin, but immutable, wrapper over native Javascript arrays. */
 
 var empty = [];
 
@@ -12,18 +11,17 @@ function length(arr) {
 }
 
 function initialize(size, offset, f) {
-    var res = new Array(size);
+    var result = new Array(size);
 
     for (var i = 0; i < size; i++) {
-        res[i] = f(offset + i);
+        result[i] = f(offset + i);
     }
 
-    return res;
+    return result;
 }
 
-// Create array from Elm list, containing at most max elements.
 function listInitialize(ls, max) {
-    var res = new Array(max);
+    var result = new Array(max);
     var i = 0;
 
     for (; i < max; i++) {
@@ -31,40 +29,38 @@ function listInitialize(ls, max) {
             break;
         }
 
-        res[i] = ls._0;
+        result[i] = ls._0;
         ls = ls._1;
     }
 
-    res.length = i;
+    result.length = i;
 
     return {
         ctor: '_Tuple2',
         _0: ls,
-        _1: res
+        _1: result
     };
 }
 
-// No bounds checking, use with caution!
 function unsafeGet(idx, arr) {
     return arr[idx];
 }
 
-// No bounds checking, use with caution!
 function unsafeSet(idx, val, arr) {
-    var res = arr.slice();
-    res[idx] = val;
-    return res;
+    var result = arr.slice();
+    result[idx] = val;
+    return result;
 }
 
 function push(val, arr) {
-    var res = arr.slice();
-    res.push(val);
-    return res;
+    var result = arr.slice();
+    result.push(val);
+    return result;
 }
 
 function foldl(f, init, arr) {
-    var a = init,
-        len = arr.length;
+    var a = init;
+    var len = arr.length;
 
     for (var i = 0; i < len; i++) {
         a = A2(f, arr[i], a);
@@ -84,36 +80,39 @@ function foldr(f, init, arr) {
 }
 
 function map(f, arr) {
-    var len = arr.length,
-        copy = new Array(len);
+    var len = arr.length;
+    var result = new Array(len);
 
     for (var i = 0; i < len; i++) {
-        copy[i] = f(arr[i]);
+        result[i] = f(arr[i]);
     }
 
-    return copy;
+    return result;
 }
 
 function slice(from, to, arr) {
     return arr.slice(from, to);
 }
 
-// Appends dest onto source, and makes sure it has max elements.
 function merge(dest, source, max) {
-    var destLen = dest.length,
-        toCopy = max - destLen,
-        sourceStop = toCopy > source.length ? source.length : toCopy,
-        arr = new Array(destLen + sourceStop);
+    var destLen = dest.length;
+    var itemsToCopy = max - destLen;
+
+    if (itemsToCopy > source.length) {
+        itemsToCopy = source.length;
+    }
+
+    var result = new Array(destLen + itemsToCopy);
 
     for (var i = 0; i < destLen; i++) {
-        arr[i] = dest[i];
+        result[i] = dest[i];
     }
 
-    for (var i = 0; i < sourceStop; i++) {
-        arr[i + destLen] = source[i];
+    for (var i = 0; i < itemsToCopy; i++) {
+        result[i + destLen] = source[i];
     }
 
-    return arr;
+    return result;
 }
 
 return {

@@ -16,73 +16,151 @@ module Array.JsArray
         , merge
         )
 
+{-| This library provides an immutable version of native javascript arrays.
+
+NOTE: All manipulations causes a copy of the entire array, this can be slow.
+For general purpose use, use the `Array` module instead.
+
+# Arrays
+@docs JsArray
+
+# Creation
+@docs empty, singleton, initialize, listInitialize
+
+# Basics
+@docs length, unsafeGet, unsafeSet, push
+
+# Transformation
+@docs foldl, foldr, map, slice, merge
+
+-}
+
 import Native.JsArray
 
 
+{-| Representation of a javascript array.
+-}
 type JsArray a
     = JsArray a
 
 
+{-| Return an empty array.
+-}
 empty : JsArray a
 empty =
     Native.JsArray.empty
 
 
+{-| Return an array containing a single value.
+-}
 singleton : a -> JsArray a
 singleton =
     Native.JsArray.singleton
 
 
+{-| Return the length of the array.
+-}
 length : JsArray a -> Int
 length =
     Native.JsArray.length
 
 
+{-| Initialize an array. `initalize n offset fn` creates an array of length `n`
+with the element at index `i` initialized to the result of `(f (i + offset))`.
+
+The offset parameter is there so one can avoid creating a closure for this use
+case. This is an optimization that has proved useful in the `Array` module.
+-}
 initialize : Int -> Int -> (Int -> a) -> JsArray a
 initialize =
     Native.JsArray.initialize
 
 
+{-| Initialize an array from a list. `listInitialize ls n` creates an array of,
+at most, `n` elements from the list. The return value is a tuple containing the
+list without the first `n` elements, as well as the created array.
+
+This function was created specifically for the `Array` module, which never wants
+to create `JsArray`s above a certain size. That being said, because every
+manipulation of `JsArray` results in a copy, users should always try to keep
+these as small as possible. The `n` parameter should always be set to a
+reasonably small value.
+-}
 listInitialize : List a -> Int -> ( List a, JsArray a )
 listInitialize =
     Native.JsArray.listInitialize
 
 
+{-| Returns the element at the given index.
+
+WARNING: This function does not perform bounds checking.
+Make sure you know the index is within bounds when using this function.
+-}
 unsafeGet : Int -> JsArray a -> a
 unsafeGet =
     Native.JsArray.unsafeGet
 
 
+{-| Sets the element at the given index.
+
+WARNING: This function does not perform bounds checking.
+Make sure you know the index is within bounds when using this function.
+-}
 unsafeSet : Int -> a -> JsArray a -> JsArray a
 unsafeSet =
     Native.JsArray.unsafeSet
 
 
+{-| Push an element onto the array.
+-}
 push : a -> JsArray a -> JsArray a
 push =
     Native.JsArray.push
 
 
+{-| Reduce the array from the left.
+-}
 foldl : (a -> b -> b) -> b -> JsArray a -> b
 foldl =
     Native.JsArray.foldl
 
 
+{-| Reduce the array from the right.
+-}
 foldr : (a -> b -> b) -> b -> JsArray a -> b
 foldr =
     Native.JsArray.foldr
 
 
+{-| Apply a function on every element in an array.
+-}
 map : (a -> b) -> JsArray a -> JsArray b
 map =
     Native.JsArray.map
 
 
+{-| Get a sub section of an array: `(slice start end array)`.
+The `start` is a zero-based index where we will start our slice.
+The `end` is a zero-based index that indicates the end of the slice.
+The slice extracts up to, but no including, the `end`.
+
+Both `start` and `end` can be negative, indicating an offset from the end
+of the array. Popping the last element of the array is therefore:
+`slice 0 -1 arr`.
+
+In the case of an impossible slice, the empty array is returned.
+-}
 slice : Int -> Int -> JsArray a -> JsArray a
 slice =
     Native.JsArray.slice
 
 
+{-| Appends one array onto another: `(merge a b max)`.
+`max` elements is appended from `b` onto `a`.
+
+The `max` parameter is required by the `Array` module, which never wants to
+create `JsArray`s above a certain size, even when appending.
+-}
 merge : JsArray a -> JsArray a -> Int -> JsArray a
 merge =
     Native.JsArray.merge

@@ -22,8 +22,7 @@ module Array.Hamt
         , toString
         )
 
-{-| Fast immutable arrays. The elements in an array must have the
-same type.
+{-| Fast immutable arrays. The elements in an array must have the same type.
 
 # Arrays
 @docs Array
@@ -52,11 +51,58 @@ import Tuple
 import Array.JsArray as JsArray exposing (JsArray)
 
 
+{-| The array in this module is implemented as a tree with a high branching
+factor (number of elements at each level). In comparision, the `Dict` has
+a branching factor of 2 (Left or Right).
+
+The higher the branching factor is, the more elements is stored at each level.
+This makes writes slower (more to copy in the worst case), but reads faster
+(less traversal). In practice, 32 is a good comprimise.
+-}
+branchFactor : Int
+branchFactor =
+    32
+
+
+{-| A number can be devided into several smaller numbers with the help of
+bit shifting and masking. Keep in mind, that when performing bitwise operations
+javascript treats all numbers as if they are 32-bit integers. The shift step
+tells us how many bits to shift to get the next number.
+
+For example. A 32-bit number can be devided into 7 smaller numbers, each
+representing a value between 0 and 31 (5 bits). By using a proper mask, you
+can read the first five bits of this number. To read the next 5 bits, you first
+need to shift the number, then mask it again.
+-}
+shiftStep : Int
+shiftStep =
+    5
+
+
+{-| The mask for reading the first n bits from a number. Has to be in sync with
+`shiftStep`. If `shiftStep` is 5, this has to be 0x1F.
+-}
+bitMask : Int
+bitMask =
+    0x1F
+
+
 {-| Representation of fast immutable arrays. You can create arrays of integers
 (`Array Int`) or strings (`Array String`) or any other type of value you can
 dream up.
 -}
 type alias Array a =
+    {-
+       A common operation for arrays is to push, pop, read or write elements
+       at the end, also known as the tail. To avoid traversing and, in write
+       cases, re-building the tree we keep the tail at the top level. Once
+       the tail is full, we insert it into the tree and then reset the top
+       level tail.
+       To retrieve (or set) an element in the array, we consult the index.
+       If the index is not found in the tail, we bit shift the index with the
+       `startShift` value. This gives us the index for the root level of the
+       tree.
+    -}
     { length : Int
     , startShift : Int
     , tree : Tree a
@@ -79,7 +125,11 @@ type alias Tree a =
 -}
 empty : Array a
 empty =
-    Array 0 5 JsArray.empty JsArray.empty
+    {-
+       `startShift` is only used when there is at least one `Node` in the `tree`.
+       The minimal value is therefore equal to the shiftStep.
+    -}
+    Array 0 shiftStep JsArray.empty JsArray.empty
 
 
 {-| Determine if an array is empty.
@@ -111,31 +161,31 @@ initialize : Int -> (Int -> a) -> Array a
 initialize stop f =
     if stop <= 0 then
         empty
-    else if stop < 32 then
+    else if stop < branchFactor then
         { length = stop
-        , startShift = 5
+        , startShift = shiftStep
         , tree = JsArray.empty
         , tail = JsArray.initialize stop 0 f
         }
     else
         let
             tailLen =
-                Bitwise.and 0x1F stop
+                Bitwise.and bitMask stop
 
             treeLen =
                 stop - tailLen
 
             requiredTreeHeight =
-                (treeLen |> toFloat |> logBase 32 |> floor)
+                (treeLen |> toFloat |> logBase (toFloat branchFactor) |> floor)
 
             subTreeSize =
-                32 ^ requiredTreeHeight
+                branchFactor ^ requiredTreeHeight
 
             numberOfSubTrees =
                 ceiling ((toFloat treeLen) / (toFloat subTreeSize))
 
             nextSubTreeSize =
-                subTreeSize // 32
+                subTreeSize // branchFactor
 
             helper idx =
                 let
@@ -148,7 +198,7 @@ initialize stop f =
                     initializeHelp nextSubTreeSize startIndex stopIndex f
         in
             { length = stop
-            , startShift = requiredTreeHeight * 5
+            , startShift = requiredTreeHeight * shiftStep
             , tree =
                 JsArray.initialize numberOfSubTrees 0 helper
             , tail =
@@ -162,15 +212,15 @@ initializeHelp subTreeSize startIndex stopIndex f =
         len =
             stopIndex - startIndex
     in
-        if len == 32 then
-            Leaf <| JsArray.initialize 32 startIndex f
+        if len == branchFactor then
+            Leaf <| JsArray.initialize branchFactor startIndex f
         else
             let
                 numberOfSubTrees =
                     ceiling ((toFloat len) / (toFloat subTreeSize))
 
                 nextSubTreeSize =
-                    subTreeSize // 32
+                    subTreeSize // branchFactor
 
                 helper idx =
                     let
@@ -213,7 +263,7 @@ fromListHelp : List a -> Array a -> Array a
 fromListHelp list arr =
     let
         ( newList, newTail ) =
-            JsArray.listInitialize list 32
+            JsArray.listInitialize list branchFactor
 
         newArray =
             pushTail newTail arr
@@ -250,7 +300,7 @@ get idx arr =
     if idx < 0 || idx >= arr.length then
         Nothing
     else if idx >= tailPrefix arr.length then
-        Just <| JsArray.unsafeGet (Bitwise.and 0x1F idx) arr.tail
+        Just <| JsArray.unsafeGet (Bitwise.and bitMask idx) arr.tail
     else
         Just <| getHelp arr.startShift idx arr.tree
 
@@ -260,7 +310,7 @@ get idx arr =
 unsafeGet : Int -> Array a -> a
 unsafeGet idx arr =
     if idx >= tailPrefix arr.length then
-        JsArray.unsafeGet (Bitwise.and 0x1F idx) arr.tail
+        JsArray.unsafeGet (Bitwise.and bitMask idx) arr.tail
     else
         getHelp arr.startShift idx arr.tree
 
@@ -269,14 +319,14 @@ getHelp : Int -> Int -> Tree a -> a
 getHelp shift idx tree =
     let
         pos =
-            Bitwise.and 0x1F <| Bitwise.shiftRightZfBy shift idx
+            Bitwise.and bitMask <| Bitwise.shiftRightZfBy shift idx
     in
         case JsArray.unsafeGet pos tree of
             SubTree subTree ->
-                getHelp (shift - 5) idx subTree
+                getHelp (shift - shiftStep) idx subTree
 
             Leaf values ->
-                JsArray.unsafeGet (Bitwise.and 0x1F idx) values
+                JsArray.unsafeGet (Bitwise.and bitMask idx) values
 
 
 {-| Set the element at a particular index. Returns an updated array.
@@ -292,7 +342,7 @@ set idx val arr =
         { length = arr.length
         , startShift = arr.startShift
         , tree = arr.tree
-        , tail = JsArray.unsafeSet (Bitwise.and 0x1F idx) val arr.tail
+        , tail = JsArray.unsafeSet (Bitwise.and bitMask idx) val arr.tail
         }
     else
         { length = arr.length
@@ -306,20 +356,20 @@ setHelp : Int -> Int -> a -> Tree a -> Tree a
 setHelp shift idx val tree =
     let
         pos =
-            Bitwise.and 0x1F <| Bitwise.shiftRightZfBy shift idx
+            Bitwise.and bitMask <| Bitwise.shiftRightZfBy shift idx
     in
         case JsArray.unsafeGet pos tree of
             SubTree subTree ->
                 let
                     newSub =
-                        setHelp (shift - 5) idx val subTree
+                        setHelp (shift - shiftStep) idx val subTree
                 in
                     JsArray.unsafeSet pos (SubTree newSub) tree
 
             Leaf values ->
                 let
                     newLeaf =
-                        JsArray.unsafeSet (Bitwise.and 0x1F idx) val values
+                        JsArray.unsafeSet (Bitwise.and bitMask idx) val values
                 in
                     JsArray.unsafeSet pos (Leaf newLeaf) tree
 
@@ -349,10 +399,10 @@ pushTail newTail arr =
             arr.length + tailLen - JsArray.length arr.tail
 
         overflow =
-            (Bitwise.shiftRightZfBy 5 newLen) >= (Bitwise.shiftLeftBy arr.startShift 1)
+            (Bitwise.shiftRightZfBy shiftStep newLen) >= (Bitwise.shiftLeftBy arr.startShift 1)
 
         newTree =
-            if tailLen == 32 then
+            if tailLen == branchFactor then
                 pushTailHelp arr.startShift arr.length newTail arr.tree
             else
                 arr.tree
@@ -360,7 +410,7 @@ pushTail newTail arr =
         { length = newLen
         , startShift =
             if overflow then
-                arr.startShift + 5
+                arr.startShift + shiftStep
             else
                 arr.startShift
         , tree =
@@ -369,7 +419,7 @@ pushTail newTail arr =
             else
                 newTree
         , tail =
-            if tailLen == 32 then
+            if tailLen == branchFactor then
                 JsArray.empty
             else
                 newTail
@@ -380,7 +430,7 @@ pushTailHelp : Int -> Int -> JsArray a -> Tree a -> Tree a
 pushTailHelp shift idx tail tree =
     let
         pos =
-            Bitwise.and 0x1F <| Bitwise.shiftRightZfBy shift idx
+            Bitwise.and bitMask <| Bitwise.shiftRightZfBy shift idx
     in
         if pos >= JsArray.length tree then
             JsArray.push (Leaf tail) tree
@@ -393,7 +443,7 @@ pushTailHelp shift idx tail tree =
                     SubTree subTree ->
                         let
                             newSub =
-                                pushTailHelp (shift - 5) idx tail subTree
+                                pushTailHelp (shift - shiftStep) idx tail subTree
                         in
                             JsArray.unsafeSet pos (SubTree newSub) tree
 
@@ -401,7 +451,7 @@ pushTailHelp shift idx tail tree =
                         let
                             newSub =
                                 JsArray.singleton val
-                                    |> pushTailHelp (shift - 5) idx tail
+                                    |> pushTailHelp (shift - shiftStep) idx tail
                         in
                             JsArray.unsafeSet pos (SubTree newSub) tree
 
@@ -410,12 +460,12 @@ pushTailHelp shift idx tail tree =
 -}
 tailPrefix : Int -> Int
 tailPrefix len =
-    if len < 32 then
+    if len < branchFactor then
         0
     else
         len
-            |> Bitwise.shiftRightZfBy 5
-            |> Bitwise.shiftLeftBy 5
+            |> Bitwise.shiftRightZfBy shiftStep
+            |> Bitwise.shiftLeftBy shiftStep
 
 
 {-| Create a list of elements from an array.
@@ -556,22 +606,22 @@ append a b =
                     JsArray.length toMerge
 
                 tailToInsert =
-                    JsArray.merge arr.tail toMerge 32
+                    JsArray.merge arr.tail toMerge branchFactor
 
                 tailLen =
                     JsArray.length tailToInsert
 
                 leftOver =
-                    max 0 <| (JsArray.length arr.tail) + toMergeLen - 32
+                    max 0 <| (JsArray.length arr.tail) + toMergeLen - branchFactor
 
                 newLen =
                     arr.length + toMergeLen
 
                 overflow =
-                    (Bitwise.shiftRightZfBy 5 newLen) >= (Bitwise.shiftLeftBy arr.startShift 1)
+                    (Bitwise.shiftRightZfBy shiftStep newLen) >= (Bitwise.shiftLeftBy arr.startShift 1)
 
                 newTree =
-                    if tailLen == 32 then
+                    if tailLen == branchFactor then
                         pushTailHelp arr.startShift arr.length tailToInsert arr.tree
                     else
                         arr.tree
@@ -579,7 +629,7 @@ append a b =
                 { length = newLen
                 , startShift =
                     if overflow then
-                        arr.startShift + 5
+                        arr.startShift + shiftStep
                     else
                         arr.startShift
                 , tree =
@@ -588,7 +638,7 @@ append a b =
                     else
                         newTree
                 , tail =
-                    if tailLen == 32 then
+                    if tailLen == branchFactor then
                         JsArray.slice (toMergeLen - leftOver) toMergeLen toMerge
                     else
                         tailToInsert
@@ -679,7 +729,7 @@ sliceRight end arr =
         { length = end
         , startShift = arr.startShift
         , tree = arr.tree
-        , tail = JsArray.slice 0 (Bitwise.and 0x1F end) arr.tail
+        , tail = JsArray.slice 0 (Bitwise.and bitMask end) arr.tail
         }
     else
         let
@@ -687,33 +737,34 @@ sliceRight end arr =
                 tailPrefix end
 
             newShift =
+                -- TODO: 1024 is hardcoded, only works with a branchFactor of 32
                 if end < 1024 then
-                    5
+                    shiftStep
                 else
-                    (end |> toFloat |> logBase 32 |> floor) * 5
+                    (end |> toFloat |> logBase (toFloat branchFactor) |> floor) * shiftStep
 
             fetchNewTail shift tree =
                 let
                     pos =
-                        Bitwise.and 0x1F <| Bitwise.shiftRightZfBy shift endIdx
+                        Bitwise.and bitMask <| Bitwise.shiftRightZfBy shift endIdx
                 in
                     case JsArray.unsafeGet pos tree of
                         SubTree sub ->
-                            fetchNewTail (shift - 5) sub
+                            fetchNewTail (shift - shiftStep) sub
 
                         Leaf values ->
-                            JsArray.slice 0 (Bitwise.and 0x1F end) values
+                            JsArray.slice 0 (Bitwise.and bitMask end) values
 
             sliceTree shift tree =
                 let
                     lastPos =
-                        Bitwise.and 0x1F <| Bitwise.shiftRightZfBy shift endIdx
+                        Bitwise.and bitMask <| Bitwise.shiftRightZfBy shift endIdx
                 in
                     case JsArray.unsafeGet lastPos tree of
                         SubTree sub ->
                             let
                                 newSub =
-                                    sliceTree (shift - 5) sub
+                                    sliceTree (shift - shiftStep) sub
                             in
                                 case JsArray.length newSub of
                                     0 ->
@@ -750,7 +801,7 @@ sliceRight end arr =
                 else
                     case JsArray.unsafeGet 0 tree of
                         SubTree sub ->
-                            hoistTree (oldShift - 5) newShift sub
+                            hoistTree (oldShift - shiftStep) newShift sub
 
                         Leaf _ ->
                             tree
