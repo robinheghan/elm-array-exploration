@@ -297,13 +297,11 @@ fromListHelp list arr =
 toString : Array a -> String
 toString array =
     let
-        helper i acc =
-            acc ++ Basics.toString i ++ ","
-
         elements =
             array
-                |> foldl helper ""
-                |> String.dropRight 1
+                |> map Basics.toString
+                |> toList
+                |> String.join ","
     in
         "Array [" ++ elements ++ "]"
 
