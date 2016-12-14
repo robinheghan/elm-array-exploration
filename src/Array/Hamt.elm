@@ -557,7 +557,7 @@ foldl f init arr =
 
 {-| Keep only elements that satisfy the predicate.
 
-    filter isEven (fromList [1..6]) == (fromList [2,4,6])
+    filter isEven (fromList [1,2,3]) == (fromList [2])
 -}
 filter : (a -> Bool) -> Array a -> Array a
 filter f arr =
