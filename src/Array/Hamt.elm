@@ -55,7 +55,7 @@ import Array.JsArray as JsArray exposing (JsArray)
 factor (number of elements at each level). In comparision, the `Dict` has
 a branching factor of 2 (left or right).
 
-The higher the branching factor, the more elements is stored at each level.
+The higher the branching factor, the more elements are stored at each level.
 This makes writes slower (more to copy per level), but reads faster
 (fewer traversals). In practice, 32 is a good compromise.
 -}
