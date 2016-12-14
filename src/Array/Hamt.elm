@@ -53,38 +53,45 @@ import Array.JsArray as JsArray exposing (JsArray)
 
 {-| The array in this module is implemented as a tree with a high branching
 factor (number of elements at each level). In comparision, the `Dict` has
-a branching factor of 2 (Left or Right).
+a branching factor of 2 (left or right).
 
-The higher the branching factor is, the more elements is stored at each level.
-This makes writes slower (more to copy in the worst case), but reads faster
-(less traversal). In practice, 32 is a good comprimise.
+The higher the branching factor, the more elements is stored at each level.
+This makes writes slower (more to copy per level), but reads faster
+(fewer traversals). In practice, 32 is a good compromise.
 -}
 branchFactor : Int
 branchFactor =
     32
 
 
-{-| A number can be devided into several smaller numbers with the help of
-bit shifting and masking. Keep in mind, that when performing bitwise operations
-javascript treats all numbers as if they are 32-bit integers. The shift step
-tells us how many bits to shift to get the next number.
-
-For example. A 32-bit number can be devided into 7 smaller numbers, each
-representing a value between 0 and 31 (5 bits). By using a proper mask, you
-can read the first five bits of this number. To read the next 5 bits, you first
-need to shift the number, then mask it again.
--}
-shiftStep : Int
-shiftStep =
-    5
-
-
-{-| The mask for reading the first n bits from a number. Has to be in sync with
-`shiftStep`. If `shiftStep` is 5, this has to be 0x1F.
+{-| The mask for reading the first 5 bits from a number. If `branchFactor`
+and `shiftStep` is altered, this has to be updated as well.
 -}
 bitMask : Int
 bitMask =
     0x1F
+
+
+{-| A number is made up of several bits. For bitwise operations in javascript,
+numbers are treated as 32-bits integers. The number 1 is represented by 31
+zeros, and a one. The important thing to take from this, is that a 32-bit integer
+has enough information to represent several smaller numbers.
+
+For a branching factor of 32, a 32-bit index has enough information to store 7
+different numbers in the range of 0-31 (5 bits). This means that the tree of an
+array can, at most, have a depth of 7.
+
+An index essentially functions as a map. To figure out which branch to take at
+any given level of the tree, we need to shift (or move) the correct amount of bits
+so that those bits are at the front. We can then perform a bitwise and with the
+above `bitMask` to read which of the 32 branches to take.
+
+The text above assumes that the branching factor is 32. If this ever changes,
+both `bitMask` and `shiftStep` must be updated as well.
+-}
+shiftStep : Int
+shiftStep =
+    5
 
 
 {-| Representation of fast immutable arrays. You can create arrays of integers
@@ -96,8 +103,8 @@ type alias Array a =
        A common operation for arrays is to push, pop, read or write elements
        at the end, also known as the tail. To avoid traversing and, in write
        cases, re-building the tree we keep the tail at the top level. Once
-       the tail is full, we insert it into the tree and then reset the top
-       level tail.
+       the tail is full, we insert it into the tree and then reset the root
+       tail.
        To retrieve (or set) an element in the array, we consult the index.
        If the index is not found in the tail, we bit shift the index with the
        `startShift` value. This gives us the index for the root level of the
@@ -110,6 +117,13 @@ type alias Array a =
     }
 
 
+{-| Each level in the tree is represented by a `JsArray` of `Node`s.
+A `Node` can either be a subtree (the next level of the tree) or, if
+we're at the bottom, a `JsArray` of values (also known as a leaf).
+
+For performance reasons we try to keep the tree as compact as possible.
+This means that the tree does not necessarily have the same depth everywhere.
+-}
 type Node a
     = SubTree (Tree a)
     | Leaf (JsArray a)
@@ -127,7 +141,7 @@ empty : Array a
 empty =
     {-
        `startShift` is only used when there is at least one `Node` in the `tree`.
-       The minimal value is therefore equal to the shiftStep.
+       The minimal value is therefore equal to the `shiftStep`.
     -}
     Array 0 shiftStep JsArray.empty JsArray.empty
 
@@ -247,7 +261,7 @@ repeat n e =
     initialize n (always e)
 
 
-{-| Create an array from a list.
+{-| Create an array from a `List`.
 -}
 fromList : List a -> Array a
 fromList ls =
@@ -294,7 +308,7 @@ toString array =
         "Array [" ++ elements ++ "]"
 
 
-{-| Return Just the element at the index or Nothing if the index is out of range.
+{-| Return `Just` the element at the index or `Nothing`` if the index is out of range.
 
     get  0 (fromList [0,1,2]) == Just 0
     get  2 (fromList [0,1,2]) == Just 2
@@ -311,7 +325,8 @@ get idx arr =
         Just <| getHelp arr.startShift idx arr.tree
 
 
-{-| Only use this if you know what you are doing!
+{-| Does not perform bounds checking.
+Make sure you know the index is within bounds before using.
 -}
 unsafeGet : Int -> Array a -> a
 unsafeGet idx arr =
@@ -463,6 +478,7 @@ pushTailHelp shift idx tail tree =
 
 
 {-| Given an array length, return the index of the first element in the tail.
+Used to check if a given index references something in the tail.
 -}
 tailPrefix : Int -> Int
 tailPrefix len =
@@ -718,12 +734,13 @@ translateIndex idx arr =
 
 
 {-| This function is an optimization for the special case when only slicing from the right.
+
 First, two things are tested:
 1. If the array does not need slicing, return the original array.
 2. If the array can be sliced by only slicing the tail, slice the tail.
 
 In any other case we need to do three things:
-1. Find the new tail in the tree, promote it to the tail position and slice it.
+1. Find the new tail in the tree, promote it to the root tail position and slice it.
 2. Slice every sub tree.
 3. Promote leaf nodes that are the sole element of a sub tree (for equality to work).
 -}
@@ -743,80 +760,102 @@ sliceRight end arr =
                 tailPrefix end
 
             newShift =
-                -- TODO: 1024 is hardcoded, only works with a branchFactor of 32
-                if end < 1024 then
+                if end < branchFactor then
                     shiftStep
                 else
                     (end |> toFloat |> logBase (toFloat branchFactor) |> floor) * shiftStep
-
-            fetchNewTail shift tree =
-                let
-                    pos =
-                        Bitwise.and bitMask <| Bitwise.shiftRightZfBy shift endIdx
-                in
-                    case JsArray.unsafeGet pos tree of
-                        SubTree sub ->
-                            fetchNewTail (shift - shiftStep) sub
-
-                        Leaf values ->
-                            JsArray.slice 0 (Bitwise.and bitMask end) values
-
-            sliceTree shift tree =
-                let
-                    lastPos =
-                        Bitwise.and bitMask <| Bitwise.shiftRightZfBy shift endIdx
-                in
-                    case JsArray.unsafeGet lastPos tree of
-                        SubTree sub ->
-                            let
-                                newSub =
-                                    sliceTree (shift - shiftStep) sub
-                            in
-                                case JsArray.length newSub of
-                                    0 ->
-                                        JsArray.slice 0 lastPos tree
-
-                                    1 ->
-                                        let
-                                            val =
-                                                JsArray.unsafeGet 0 newSub
-
-                                            nodeToInsert =
-                                                case val of
-                                                    SubTree _ ->
-                                                        SubTree newSub
-
-                                                    Leaf _ ->
-                                                        val
-                                        in
-                                            tree
-                                                |> JsArray.slice 0 (lastPos + 1)
-                                                |> JsArray.unsafeSet lastPos nodeToInsert
-
-                                    _ ->
-                                        tree
-                                            |> JsArray.slice 0 (lastPos + 1)
-                                            |> JsArray.unsafeSet lastPos (SubTree newSub)
-
-                        Leaf _ ->
-                            JsArray.slice 0 lastPos tree
-
-            hoistTree oldShift newShift tree =
-                if oldShift <= newShift then
-                    tree
-                else
-                    case JsArray.unsafeGet 0 tree of
-                        SubTree sub ->
-                            hoistTree (oldShift - shiftStep) newShift sub
-
-                        Leaf _ ->
-                            tree
         in
             { length = end
             , startShift = newShift
             , tree =
                 arr.tree
-                    |> sliceTree arr.startShift
+                    |> sliceTree arr.startShift endIdx
                     |> hoistTree arr.startShift newShift
-            , tail = fetchNewTail arr.startShift arr.tree
+            , tail = fetchNewTail arr.startShift end endIdx arr.tree
             }
+
+
+{-| Slice and return the `Leaf` node after what is to be the last node
+in the sliced tree.
+-}
+fetchNewTail : Int -> Int -> Int -> Tree a -> JsArray a
+fetchNewTail shift end treeEnd tree =
+    let
+        pos =
+            Bitwise.and bitMask <| Bitwise.shiftRightZfBy shift treeEnd
+    in
+        case JsArray.unsafeGet pos tree of
+            SubTree sub ->
+                fetchNewTail (shift - shiftStep) end treeEnd sub
+
+            Leaf values ->
+                JsArray.slice 0 (Bitwise.and bitMask end) values
+
+
+{-| Shorten the root `Node` of the tree so it is long enough to contain
+the `Node` indicated by `endIdx`. The recursively perform the same operation
+to the last node of each `SubTree`.
+-}
+sliceTree : Int -> Int -> Tree a -> Tree a
+sliceTree shift endIdx tree =
+    let
+        lastPos =
+            Bitwise.and bitMask <| Bitwise.shiftRightZfBy shift endIdx
+    in
+        case JsArray.unsafeGet lastPos tree of
+            SubTree sub ->
+                let
+                    newSub =
+                        sliceTree (shift - shiftStep) endIdx sub
+                in
+                    case JsArray.length newSub of
+                        -- The sub is empty, slice it away
+                        0 ->
+                            JsArray.slice 0 lastPos tree
+
+                        -- Only contains a single element, promote it if
+                        -- it is a `Leaf`. See documentation on `hoistTree`.
+                        1 ->
+                            let
+                                val =
+                                    JsArray.unsafeGet 0 newSub
+
+                                nodeToInsert =
+                                    case val of
+                                        SubTree _ ->
+                                            SubTree newSub
+
+                                        Leaf _ ->
+                                            val
+                            in
+                                tree
+                                    |> JsArray.slice 0 (lastPos + 1)
+                                    |> JsArray.unsafeSet lastPos nodeToInsert
+
+                        _ ->
+                            tree
+                                |> JsArray.slice 0 (lastPos + 1)
+                                |> JsArray.unsafeSet lastPos (SubTree newSub)
+
+            -- This is supposed to be the new tail. Slice up to, but not including,
+            -- this point.
+            Leaf _ ->
+                JsArray.slice 0 lastPos tree
+
+
+{-| To keep the tree in its most compact form, `Leaf` nodes are stored as close to
+the root as possible. To make sure that slicing does not break equality, we make
+sure that this is still the case after slicing. `sliceTree` does most of the work
+in this regard, but it does not handle the root node.
+-}
+hoistTree : Int -> Int -> Tree a -> Tree a
+hoistTree oldShift newShift tree =
+    if oldShift <= newShift then
+        tree
+    else
+        case JsArray.unsafeGet 0 tree of
+            SubTree sub ->
+                hoistTree (oldShift - shiftStep) newShift sub
+
+            Leaf _ ->
+                tree

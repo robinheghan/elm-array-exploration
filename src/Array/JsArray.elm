@@ -19,7 +19,7 @@ module Array.JsArray
 {-| This library provides an immutable version of native javascript arrays.
 
 NOTE: All manipulations causes a copy of the entire array, this can be slow.
-For general purpose use, use the `Array` module instead.
+For general purpose use, try the `Array` module instead.
 
 # Arrays
 @docs JsArray
@@ -70,6 +70,8 @@ with the element at index `i` initialized to the result of `(f (i + offset))`.
 
 The offset parameter is there so one can avoid creating a closure for this use
 case. This is an optimization that has proved useful in the `Array` module.
+
+    initialize 3 5 identity == [5,6,7]
 -}
 initialize : Int -> Int -> (Int -> a) -> JsArray a
 initialize =
