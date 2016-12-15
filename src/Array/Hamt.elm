@@ -64,8 +64,11 @@ branchFactor =
     32
 
 
-{-| The mask for reading the first 5 bits from a number. If `branchFactor`
-and `shiftStep` is altered, this has to be updated as well.
+{-| The mask to read the first 5 bits of a number as a number of its own.
+If `branchFactor` and `shiftStep` is altered, this has to be updated as well.
+
+Example: The first 5 bits of 32 is all zeros, which gives the number 0.
+The first five bits of 33 ends in a 1, which gives the number 1.
 -}
 bitMask : Int
 bitMask =
@@ -77,9 +80,10 @@ numbers are treated as 32-bits integers. The number 1 is represented by 31
 zeros, and a one. The important thing to take from this, is that a 32-bit integer
 has enough information to represent several smaller numbers.
 
-For a branching factor of 32, a 32-bit index has enough information to store 7
-different numbers in the range of 0-31 (5 bits). This means that the tree of an
-array can, at most, have a depth of 7.
+For a branching factor of 32, a 32-bit index has enough information to store 6
+different numbers in the range of 0-31 (5 bits), and one number in the range of
+0-3 (2 bits). This means that the tree of an array can have, at most, a depth
+of 7.
 
 An index essentially functions as a map. To figure out which branch to take at
 any given level of the tree, we need to shift (or move) the correct amount of bits
