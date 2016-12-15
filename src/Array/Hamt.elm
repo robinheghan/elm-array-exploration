@@ -67,8 +67,8 @@ branchFactor =
 {-| The mask to read the first 5 bits of a number as a number of its own.
 If `branchFactor` and `shiftStep` is altered, this has to be updated as well.
 
-Example: The first 5 bits of 32 is all zeros, which gives the number 0.
-The first five bits of 33 ends in a 1, which gives the number 1.
+Example: The first 5 bits of 64 is all zeros, which gives the number 0.
+The first five bits of 65 ends in a 1, which gives the number 1.
 -}
 bitMask : Int
 bitMask =
