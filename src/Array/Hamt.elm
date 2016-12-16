@@ -64,17 +64,6 @@ branchFactor =
     32
 
 
-{-| The mask to read the first 5 bits of a number as a number of its own.
-If `branchFactor` and `shiftStep` is altered, this has to be updated as well.
-
-Example: The first 5 bits of 64 is all zeros, which gives the number 0.
-The first five bits of 65 ends in a 1, which gives the number 1.
--}
-bitMask : Int
-bitMask =
-    0x1F
-
-
 {-| A number is made up of several bits. For bitwise operations in javascript,
 numbers are treated as 32-bits integers. The number 1 is represented by 31
 zeros, and a one. The important thing to take from this, is that a 32-bit integer
@@ -96,6 +85,24 @@ both `bitMask` and `shiftStep` must be updated as well.
 shiftStep : Int
 shiftStep =
     5
+
+
+{-| The mask to read the first 5 bits of a number as a number of its own.
+If `branchFactor` and `shiftStep` is altered, this has to be updated as well.
+
+Example: The first 5 bits of 64 is all zeros, which gives the number 0.
+The first five bits of 65 ends in a 1, which gives the number 1.
+-}
+bitMask : Int
+bitMask =
+    0x1F
+
+
+{-| The reverse mask. Used to calculate the index of the first item in the tail.
+-}
+reverseMask : Int
+reverseMask =
+    Bitwise.xor bitMask 0xFFFFFFFF
 
 
 {-| Representation of fast immutable arrays. You can create arrays of integers
@@ -397,6 +404,14 @@ setHelp shift idx val tree =
                     JsArray.unsafeSet pos (Leaf newLeaf) tree
 
 
+{-| Given an array length, return the index of the first element in the tail.
+Used to check if a given index references something in the tail.
+-}
+tailPrefix : Int -> Int
+tailPrefix len =
+    Bitwise.and reverseMask len
+
+
 {-| Push an element onto the end of an array.
 
     push 3 (fromList [1,2]) == fromList [1,2,3]
@@ -477,19 +492,6 @@ pushTailHelp shift idx tail tree =
                                     |> pushTailHelp (shift - shiftStep) idx tail
                         in
                             JsArray.unsafeSet pos (SubTree newSub) tree
-
-
-{-| Given an array length, return the index of the first element in the tail.
-Used to check if a given index references something in the tail.
--}
-tailPrefix : Int -> Int
-tailPrefix len =
-    if len < branchFactor then
-        0
-    else
-        len
-            |> Bitwise.shiftRightZfBy shiftStep
-            |> Bitwise.shiftLeftBy shiftStep
 
 
 {-| Create a list of elements from an array.
