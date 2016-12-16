@@ -57,7 +57,9 @@ a branching factor of 2 (left or right).
 
 The higher the branching factor, the more elements are stored at each level.
 This makes writes slower (more to copy per level), but reads faster
-(fewer traversals). In practice, 32 is a good compromise.
+(fewer traversals).In practice, 32 is a good compromise.
+
+Must be a power of two (8, 16, 32, 64...)!
 -}
 branchFactor : Int
 branchFactor =
@@ -76,33 +78,30 @@ of 7.
 
 An index essentially functions as a map. To figure out which branch to take at
 any given level of the tree, we need to shift (or move) the correct amount of bits
-so that those bits are at the front. We can then perform a bitwise and with the
-above `bitMask` to read which of the 32 branches to take.
+so that those bits are at the front. We can then perform a bitwise and to read
+which of the 32 branches to take.
 
-The text above assumes that the branching factor is 32. If this ever changes,
-both `bitMask` and `shiftStep` must be updated as well.
+The `shiftStep` specifices how many bits are required to represent the branching
+factor.
 -}
 shiftStep : Int
 shiftStep =
-    5
+    logBase 2 (toFloat branchFactor) |> ceiling
 
 
-{-| The mask to read the first 5 bits of a number as a number of its own.
-If `branchFactor` and `shiftStep` is altered, this has to be updated as well.
-
-Example: The first 5 bits of 64 is all zeros, which gives the number 0.
-The first five bits of 65 ends in a 1, which gives the number 1.
+{-| A mask which, when used in a bitwise and, reads the first `shiftStep` bits
+in a number as a number of its own.
 -}
 bitMask : Int
 bitMask =
-    0x1F
+    Bitwise.shiftRightZfBy (32 - shiftStep) 0xFFFFFFFF
 
 
 {-| The reverse mask. Used to calculate the index of the first item in the tail.
 -}
 reverseMask : Int
 reverseMask =
-    Bitwise.xor bitMask 0xFFFFFFFF
+    Bitwise.complement bitMask
 
 
 {-| Representation of fast immutable arrays. You can create arrays of integers
