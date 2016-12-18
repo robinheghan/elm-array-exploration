@@ -97,13 +97,6 @@ bitMask =
     Bitwise.shiftRightZfBy (32 - shiftStep) 0xFFFFFFFF
 
 
-{-| The reverse mask. Used to calculate the index of the first item in the tail.
--}
-reverseMask : Int
-reverseMask =
-    Bitwise.complement bitMask
-
-
 {-| Representation of fast immutable arrays. You can create arrays of integers
 (`Array Int`) or strings (`Array String`) or any other type of value you can
 dream up.
@@ -401,6 +394,13 @@ setHelp shift idx val tree =
                         JsArray.unsafeSet (Bitwise.and bitMask idx) val values
                 in
                     JsArray.unsafeSet pos (Leaf newLeaf) tree
+
+
+{-| The reverse mask. Used to calculate the index of the first item in the tail.
+-}
+reverseMask : Int
+reverseMask =
+    Bitwise.complement bitMask
 
 
 {-| Given an array length, return the index of the first element in the tail.
