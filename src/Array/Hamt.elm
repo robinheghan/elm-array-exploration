@@ -59,7 +59,11 @@ The higher the branching factor, the more elements are stored at each level.
 This makes writes slower (more to copy per level), but reads faster
 (fewer traversals).In practice, 32 is a good compromise.
 
-Must be a power of two (8, 16, 32, 64...)!
+Has to be a power of two (8, 16, 32, 64...). This is because we use the
+index to tell us which path to take when navigating the tree, and we do
+this by dividing it into several smaller numbers (see `shiftStep` documentation).
+By dividing the index into smaller numbers, we will always get a range
+which is a power of two (2 bits gives 0-3, 3 gives 0-7, 4 gives 0-15...).
 -}
 branchFactor : Int
 branchFactor =
