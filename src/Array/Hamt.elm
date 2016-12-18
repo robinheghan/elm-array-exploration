@@ -513,7 +513,7 @@ toIndexedList arr =
         helper n ( idx, ls ) =
             ( idx - 1, ( idx, n ) :: ls )
     in
-        Tuple.second <| foldr helper ( length arr - 1, [] ) arr
+        Tuple.second <| foldr helper ( arr.length - 1, [] ) arr
 
 
 {-| Reduce an array from the right. Read `foldr` as fold from the right.
