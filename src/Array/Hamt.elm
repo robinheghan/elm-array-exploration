@@ -804,7 +804,7 @@ fetchNewTail shift end treeEnd tree =
 
 
 {-| Shorten the root `Node` of the tree so it is long enough to contain
-the `Node` indicated by `endIdx`. The recursively perform the same operation
+the `Node` indicated by `endIdx`. Then recursively perform the same operation
 to the last node of each `SubTree`.
 -}
 sliceTree : Int -> Int -> Tree a -> Tree a
