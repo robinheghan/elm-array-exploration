@@ -150,7 +150,11 @@ empty =
        `startShift` is only used when there is at least one `Node` in the `tree`.
        The minimal value is therefore equal to the `shiftStep`.
     -}
-    Array 0 shiftStep JsArray.empty JsArray.empty
+    { length = 0
+    , startShift = shiftStep
+    , tree = JsArray.empty
+    , tail = JsArray.empty
+    }
 
 
 {-| Determine if an array is empty.
