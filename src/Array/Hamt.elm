@@ -404,19 +404,14 @@ setHelp shift idx val tree =
                     JsArray.unsafeSet pos (Leaf newLeaf) tree
 
 
-{-| The reverse mask. Used to calculate the index of the first item in the tail.
--}
-reverseMask : Int
-reverseMask =
-    Bitwise.complement bitMask
-
-
 {-| Given an array length, return the index of the first element in the tail.
 Used to check if a given index references something in the tail.
 -}
 tailPrefix : Int -> Int
 tailPrefix len =
-    Bitwise.and reverseMask len
+    len
+        |> Bitwise.shiftRightZfBy 5
+        |> Bitwise.shiftLeftBy 5
 
 
 {-| Push an element onto the end of an array.
