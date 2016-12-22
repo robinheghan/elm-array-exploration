@@ -57,7 +57,7 @@ a branching factor of 2 (left or right).
 
 The higher the branching factor, the more elements are stored at each level.
 This makes writes slower (more to copy per level), but reads faster
-(fewer traversals).In practice, 32 is a good compromise.
+(fewer traversals). In practice, 32 is a good compromise.
 
 Has to be a power of two (8, 16, 32, 64...). This is because we use the
 index to tell us which path to take when navigating the tree, and we do
@@ -201,7 +201,7 @@ initialize stop f =
                 stop - tailLen
 
             requiredTreeHeight =
-                (treeLen |> toFloat |> logBase (toFloat branchFactor) |> floor)
+                treeLen |> toFloat |> logBase (toFloat branchFactor) |> floor
 
             subTreeSize =
                 branchFactor ^ requiredTreeHeight
