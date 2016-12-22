@@ -105,23 +105,17 @@ bitMask =
 (`Array Int`) or strings (`Array String`) or any other type of value you can
 dream up.
 -}
-type alias Array a =
-    {-
-       A common operation for arrays is to push, pop, read or write elements
-       at the end, also known as the tail. To avoid traversing and, in write
-       cases, re-building the tree we keep the tail at the top level. Once
-       the tail is full, we insert it into the tree and then reset the root
-       tail.
-       To retrieve (or set) an element in the array, we consult the index.
-       If the index is not found in the tail, we bit shift the index with the
-       `startShift` value. This gives us the index for the root level of the
-       tree.
-    -}
-    { length : Int
-    , startShift : Int
-    , tree : Tree a
-    , tail : JsArray a
-    }
+type Array a
+    = {-
+         * length : Int = The length of the array.
+         * startShift : Int = How many bits to shift of the index, to get the slot
+         for the first level of the tree.
+         * tree : Tree a = The actual tree.
+         * tail : JsArray a = The tail of the array. Inserted into tree when number
+         of elements is equal to the branching factor. This is an optimization.
+         It makes operations at the end (push, pop, read, write) fast.
+      -}
+      Array Int Int (Tree a) (JsArray a)
 
 
 {-| Each level in the tree is represented by a `JsArray` of `Node`s.
@@ -150,11 +144,7 @@ empty =
        `startShift` is only used when there is at least one `Node` in the `tree`.
        The minimal value is therefore equal to the `shiftStep`.
     -}
-    { length = 0
-    , startShift = shiftStep
-    , tree = JsArray.empty
-    , tail = JsArray.empty
-    }
+    Array 0 shiftStep JsArray.empty JsArray.empty
 
 
 {-| Determine if an array is empty.
@@ -162,8 +152,8 @@ empty =
     isEmpty empty == True
 -}
 isEmpty : Array a -> Bool
-isEmpty arr =
-    arr.length == 0
+isEmpty (Array length _ _ _) =
+    length == 0
 
 
 {-| Return the length of an array.
@@ -171,8 +161,8 @@ isEmpty arr =
     length (fromList [1,2,3]) == 3
 -}
 length : Array a -> Int
-length arr =
-    arr.length
+length (Array length _ _ _) =
+    length
 
 
 {-| Initialize an array. `initialize n f` creates an array of length `n` with
@@ -187,11 +177,8 @@ initialize stop f =
     if stop <= 0 then
         empty
     else if stop < branchFactor then
-        { length = stop
-        , startShift = shiftStep
-        , tree = JsArray.empty
-        , tail = JsArray.initialize stop 0 f
-        }
+        Array stop shiftStep JsArray.empty <|
+            JsArray.initialize stop 0 f
     else
         let
             tailLen =
@@ -222,13 +209,11 @@ initialize stop f =
                 in
                     initializeHelp nextSubTreeSize startIndex stopIndex f
         in
-            { length = stop
-            , startShift = requiredTreeHeight * shiftStep
-            , tree =
-                JsArray.initialize numberOfSubTrees 0 helper
-            , tail =
-                JsArray.initialize tailLen treeLen f
-            }
+            Array
+                stop
+                (requiredTreeHeight * shiftStep)
+                (JsArray.initialize numberOfSubTrees 0 helper)
+                (JsArray.initialize tailLen treeLen f)
 
 
 initializeHelp : Int -> Int -> Int -> (Int -> a) -> Node a
@@ -325,24 +310,24 @@ toString array =
     get -1 (fromList [0,1,2]) == Nothing
 -}
 get : Int -> Array a -> Maybe a
-get idx arr =
-    if idx < 0 || idx >= arr.length then
+get idx (Array length startShift tree tail) =
+    if idx < 0 || idx >= length then
         Nothing
-    else if idx >= tailPrefix arr.length then
-        Just <| JsArray.unsafeGet (Bitwise.and bitMask idx) arr.tail
+    else if idx >= tailPrefix length then
+        Just <| JsArray.unsafeGet (Bitwise.and bitMask idx) tail
     else
-        Just <| getHelp arr.startShift idx arr.tree
+        Just <| getHelp startShift idx tree
 
 
 {-| Does not perform bounds checking.
 Make sure you know the index is within bounds before using.
 -}
 unsafeGet : Int -> Array a -> a
-unsafeGet idx arr =
-    if idx >= tailPrefix arr.length then
-        JsArray.unsafeGet (Bitwise.and bitMask idx) arr.tail
+unsafeGet idx (Array length startShift tree tail) =
+    if idx >= tailPrefix length then
+        JsArray.unsafeGet (Bitwise.and bitMask idx) tail
     else
-        getHelp arr.startShift idx arr.tree
+        getHelp startShift idx tree
 
 
 getHelp : Int -> Int -> Tree a -> a
@@ -365,21 +350,18 @@ If the index is out of range, the array is unaltered.
     set 1 7 (fromList [1,2,3]) == fromList [1,7,3]
 -}
 set : Int -> a -> Array a -> Array a
-set idx val arr =
-    if idx < 0 || idx >= arr.length then
+set idx val ((Array length startShift tree tail) as arr) =
+    if idx < 0 || idx >= length then
         arr
-    else if idx >= tailPrefix arr.length then
-        { length = arr.length
-        , startShift = arr.startShift
-        , tree = arr.tree
-        , tail = JsArray.unsafeSet (Bitwise.and bitMask idx) val arr.tail
-        }
+    else if idx >= tailPrefix length then
+        Array length startShift tree <|
+            JsArray.unsafeSet (Bitwise.and bitMask idx) val tail
     else
-        { length = arr.length
-        , startShift = arr.startShift
-        , tree = setHelp arr.startShift idx val arr.tree
-        , tail = arr.tail
-        }
+        Array
+            length
+            startShift
+            (setHelp startShift idx val tree)
+            tail
 
 
 setHelp : Int -> Int -> a -> Tree a -> Tree a
@@ -419,10 +401,10 @@ tailPrefix len =
     push 3 (fromList [1,2]) == fromList [1,2,3]
 -}
 push : a -> Array a -> Array a
-push a arr =
+push a ((Array _ _ _ tail) as arr) =
     let
         newTail =
-            JsArray.push a arr.tail
+            JsArray.push a tail
     in
         pushTail newTail arr
 
@@ -430,40 +412,40 @@ push a arr =
 {-| Update the tail of an array, pushing it into the tree if necessary.
 -}
 pushTail : JsArray a -> Array a -> Array a
-pushTail newTail arr =
+pushTail newTail (Array length startShift tree tail) =
     let
         tailLen =
             JsArray.length newTail
 
         newLen =
-            arr.length + tailLen - JsArray.length arr.tail
+            length + tailLen - JsArray.length tail
 
         overflow =
-            (Bitwise.shiftRightZfBy shiftStep newLen) >= (Bitwise.shiftLeftBy arr.startShift 1)
+            (Bitwise.shiftRightZfBy shiftStep newLen) >= (Bitwise.shiftLeftBy startShift 1)
 
         newTree =
             if tailLen == branchFactor then
-                pushTailHelp arr.startShift arr.length newTail arr.tree
+                pushTailHelp startShift length newTail tree
             else
-                arr.tree
+                tree
     in
-        { length = newLen
-        , startShift =
-            if overflow then
-                arr.startShift + shiftStep
-            else
-                arr.startShift
-        , tree =
-            if overflow then
+        Array
+            newLen
+            (if overflow then
+                startShift + shiftStep
+             else
+                startShift
+            )
+            (if overflow then
                 JsArray.singleton (SubTree newTree)
-            else
+             else
                 newTree
-        , tail =
-            if tailLen == branchFactor then
+            )
+            (if tailLen == branchFactor then
                 JsArray.empty
-            else
+             else
                 newTail
-        }
+            )
 
 
 pushTailHelp : Int -> Int -> JsArray a -> Tree a -> Tree a
@@ -511,12 +493,12 @@ paired with its index.
     toIndexedList (fromList ["cat","dog"]) == [(0,"cat"), (1,"dog")]
 -}
 toIndexedList : Array a -> List ( Int, a )
-toIndexedList arr =
+toIndexedList ((Array length _ _ _) as arr) =
     let
         helper n ( idx, ls ) =
             ( idx - 1, ( idx, n ) :: ls )
     in
-        Tuple.second <| foldr helper ( arr.length - 1, [] ) arr
+        Tuple.second <| foldr helper ( length - 1, [] ) arr
 
 
 {-| Reduce an array from the right. Read `foldr` as fold from the right.
@@ -524,7 +506,7 @@ toIndexedList arr =
     foldr (+) 0 (repeat 3 5) == 15
 -}
 foldr : (a -> b -> b) -> b -> Array a -> b
-foldr f init arr =
+foldr f init (Array _ _ tree tail) =
     let
         helper i acc =
             case i of
@@ -534,10 +516,10 @@ foldr f init arr =
                 Leaf values ->
                     JsArray.foldr f acc values
 
-        tail =
-            JsArray.foldr f init arr.tail
+        acc =
+            JsArray.foldr f init tail
     in
-        JsArray.foldr helper tail arr.tree
+        JsArray.foldr helper acc tree
 
 
 {-| Reduce an array from the left. Read `foldl` as fold from the left.
@@ -545,7 +527,7 @@ foldr f init arr =
     foldl (::) [] (fromList [1,2,3]) == [3,2,1]
 -}
 foldl : (a -> b -> b) -> b -> Array a -> b
-foldl f init arr =
+foldl f init (Array _ _ tree tail) =
     let
         helper i acc =
             case i of
@@ -555,10 +537,10 @@ foldl f init arr =
                 Leaf values ->
                     JsArray.foldl f acc values
 
-        tree =
-            JsArray.foldl helper init arr.tree
+        acc =
+            JsArray.foldl helper init tree
     in
-        JsArray.foldl f tree arr.tail
+        JsArray.foldl f acc tail
 
 
 {-| Keep only elements that satisfy the predicate.
@@ -583,7 +565,7 @@ filter f arr =
     map sqrt (fromList [1,4,9]) == fromList [1,2,3]
 -}
 map : (a -> b) -> Array a -> Array b
-map f arr =
+map f (Array length startShift tree tail) =
     let
         helper i =
             case i of
@@ -593,11 +575,11 @@ map f arr =
                 Leaf values ->
                     Leaf <| JsArray.map f values
     in
-        { length = arr.length
-        , startShift = arr.startShift
-        , tree = JsArray.map helper arr.tree
-        , tail = JsArray.map f arr.tail
-        }
+        Array
+            length
+            startShift
+            (JsArray.map helper tree)
+            (JsArray.map f tail)
 
 
 {-| Apply a function on every element with its index as first argument.
@@ -605,12 +587,12 @@ map f arr =
     indexedMap (*) (fromList [5,5,5]) == fromList [0,5,10]
 -}
 indexedMap : (Int -> a -> b) -> Array a -> Array b
-indexedMap f arr =
+indexedMap f ((Array length _ _ _) as arr) =
     let
         helper idx =
             f idx <| unsafeGet idx arr
     in
-        initialize arr.length helper
+        initialize length helper
 
 
 {-| Append one array onto another one.
@@ -618,7 +600,7 @@ indexedMap f arr =
     append (repeat 2 42) (repeat 3 81) == fromList [42,42,81,81,81]
 -}
 append : Array a -> Array a -> Array a
-append a b =
+append a (Array _ _ bTree bTail) =
     let
         helper i acc =
             case i of
@@ -628,52 +610,52 @@ append a b =
                 Leaf values ->
                     tailMerge values acc
 
-        tailMerge toMerge arr =
+        tailMerge toMerge (Array length startShift tree tail) =
             let
                 toMergeLen =
                     JsArray.length toMerge
 
                 tailToInsert =
-                    JsArray.merge arr.tail toMerge branchFactor
+                    JsArray.merge tail toMerge branchFactor
 
                 tailLen =
                     JsArray.length tailToInsert
 
                 leftOver =
-                    max 0 <| (JsArray.length arr.tail) + toMergeLen - branchFactor
+                    max 0 <| (JsArray.length tail) + toMergeLen - branchFactor
 
                 newLen =
-                    arr.length + toMergeLen
+                    length + toMergeLen
 
                 overflow =
-                    (Bitwise.shiftRightZfBy shiftStep newLen) >= (Bitwise.shiftLeftBy arr.startShift 1)
+                    Bitwise.shiftRightZfBy shiftStep newLen >= Bitwise.shiftLeftBy startShift 1
 
                 newTree =
                     if tailLen == branchFactor then
-                        pushTailHelp arr.startShift arr.length tailToInsert arr.tree
+                        pushTailHelp startShift length tailToInsert tree
                     else
-                        arr.tree
+                        tree
             in
-                { length = newLen
-                , startShift =
-                    if overflow then
-                        arr.startShift + shiftStep
-                    else
-                        arr.startShift
-                , tree =
-                    if overflow then
+                Array
+                    newLen
+                    (if overflow then
+                        startShift + shiftStep
+                     else
+                        startShift
+                    )
+                    (if overflow then
                         JsArray.singleton (SubTree newTree)
-                    else
+                     else
                         newTree
-                , tail =
-                    if tailLen == branchFactor then
+                    )
+                    (if tailLen == branchFactor then
                         JsArray.slice (toMergeLen - leftOver) toMergeLen toMerge
-                    else
+                     else
                         tailToInsert
-                }
+                    )
     in
-        JsArray.foldl helper a b.tree
-            |> tailMerge b.tail
+        JsArray.foldl helper a bTree
+            |> tailMerge bTail
 
 
 {-| Get a sub-section of an array: `(slice start end array)`. The `start` is a
@@ -723,18 +705,18 @@ slice from to arr =
     translateIndex 5 someArray == 5
 -}
 translateIndex : Int -> Array a -> Int
-translateIndex idx arr =
+translateIndex idx (Array length _ _ _) =
     let
         posIndex =
             if idx < 0 then
-                arr.length + idx
+                length + idx
             else
                 idx
     in
         if posIndex < 0 then
             0
-        else if posIndex > arr.length then
-            arr.length
+        else if posIndex > length then
+            length
         else
             posIndex
 
@@ -751,15 +733,12 @@ In any other case we need to do three things:
 3. Promote leaf nodes that are the sole element of a sub tree (for equality to work).
 -}
 sliceRight : Int -> Array a -> Array a
-sliceRight end arr =
-    if end == arr.length then
+sliceRight end ((Array length startShift tree tail) as arr) =
+    if end == length then
         arr
-    else if end >= tailPrefix arr.length then
-        { length = end
-        , startShift = arr.startShift
-        , tree = arr.tree
-        , tail = JsArray.slice 0 (Bitwise.and bitMask end) arr.tail
-        }
+    else if end >= tailPrefix length then
+        Array end startShift tree <|
+            JsArray.slice 0 (Bitwise.and bitMask end) tail
     else
         let
             endIdx =
@@ -771,14 +750,13 @@ sliceRight end arr =
                 else
                     (end |> toFloat |> logBase (toFloat branchFactor) |> floor) * shiftStep
         in
-            { length = end
-            , startShift = newShift
-            , tree =
-                arr.tree
-                    |> sliceTree arr.startShift endIdx
-                    |> hoistTree arr.startShift newShift
-            , tail = fetchNewTail arr.startShift end endIdx arr.tree
-            }
+            Array end
+                newShift
+                (tree
+                    |> sliceTree startShift endIdx
+                    |> hoistTree startShift newShift
+                )
+                (fetchNewTail startShift end endIdx tree)
 
 
 {-| Slice and return the `Leaf` node after what is to be the last node
