@@ -188,7 +188,10 @@ initialize stop f =
                 stop - tailLen
 
             requiredTreeHeight =
-                treeLen |> toFloat |> logBase (toFloat branchFactor) |> floor
+                treeLen
+                    |> toFloat
+                    |> logBase (toFloat branchFactor)
+                    |> floor
 
             subTreeSize =
                 branchFactor ^ requiredTreeHeight
@@ -266,24 +269,33 @@ fromList ls =
             empty
 
         _ ->
-            fromListHelp ls empty
+            fromListHelp ls emptyBuilder
 
 
-fromListHelp : List a -> Array a -> Array a
-fromListHelp list arr =
+fromListHelp : List a -> Builder a -> Array a
+fromListHelp list builder =
     let
-        ( newList, newTail ) =
+        ( newList, jsArray ) =
             JsArray.listInitialize list branchFactor
 
-        newArray =
-            pushTail newTail arr
+        newBuilder =
+            if JsArray.length jsArray == branchFactor then
+                { tail = builder.tail
+                , nodeList = (Leaf jsArray) :: builder.nodeList
+                , nodeListSize = builder.nodeListSize + 1
+                }
+            else
+                { tail = jsArray
+                , nodeList = builder.nodeList
+                , nodeListSize = builder.nodeListSize
+                }
     in
         case newList of
             [] ->
-                newArray
+                builderToArray newBuilder
 
             _ ->
-                fromListHelp newList newArray
+                fromListHelp newList newBuilder
 
 
 {-| Return the array represented as a string.
@@ -401,27 +413,19 @@ tailPrefix len =
     push 3 (fromList [1,2]) == fromList [1,2,3]
 -}
 push : a -> Array a -> Array a
-push a ((Array _ _ _ tail) as arr) =
+push a (Array length startShift tree tail) =
     let
         newTail =
             JsArray.push a tail
-    in
-        pushTail newTail arr
 
-
-{-| Update the tail of an array, pushing it into the tree if necessary.
--}
-pushTail : JsArray a -> Array a -> Array a
-pushTail newTail (Array length startShift tree tail) =
-    let
         tailLen =
             JsArray.length newTail
 
         newLen =
-            length + tailLen - JsArray.length tail
+            length + 1
 
         overflow =
-            (Bitwise.shiftRightZfBy shiftStep newLen) >= (Bitwise.shiftLeftBy startShift 1)
+            Bitwise.shiftRightZfBy shiftStep newLen >= Bitwise.shiftLeftBy startShift 1
 
         newTree =
             if tailLen == branchFactor then
@@ -602,60 +606,45 @@ indexedMap f ((Array length _ _ _) as arr) =
 append : Array a -> Array a -> Array a
 append a (Array _ _ bTree bTail) =
     let
-        helper i acc =
-            case i of
-                SubTree subTree ->
-                    JsArray.foldl helper acc subTree
+        builder =
+            builderFromArray a
 
-                Leaf values ->
-                    tailMerge values acc
+        foldHelper node builder =
+            case node of
+                SubTree tree ->
+                    JsArray.foldl foldHelper builder tree
 
-        tailMerge toMerge (Array length startShift tree tail) =
+                Leaf leaf ->
+                    appendTail leaf builder
+
+        appendTail tail builder =
             let
-                toMergeLen =
-                    JsArray.length toMerge
+                merged =
+                    JsArray.merge builder.tail tail branchFactor
 
-                tailToInsert =
-                    JsArray.merge tail toMerge branchFactor
+                mergedLen =
+                    JsArray.length merged
 
                 tailLen =
-                    JsArray.length tailToInsert
+                    JsArray.length tail
 
                 leftOver =
-                    max 0 <| (JsArray.length tail) + toMergeLen - branchFactor
-
-                newLen =
-                    length + toMergeLen
-
-                overflow =
-                    Bitwise.shiftRightZfBy shiftStep newLen >= Bitwise.shiftLeftBy startShift 1
-
-                newTree =
-                    if tailLen == branchFactor then
-                        pushTailHelp startShift length tailToInsert tree
-                    else
-                        tree
+                    max 0 <| (JsArray.length builder.tail) + tailLen - branchFactor
             in
-                Array
-                    newLen
-                    (if overflow then
-                        startShift + shiftStep
-                     else
-                        startShift
-                    )
-                    (if overflow then
-                        JsArray.singleton (SubTree newTree)
-                     else
-                        newTree
-                    )
-                    (if tailLen == branchFactor then
-                        JsArray.slice (toMergeLen - leftOver) toMergeLen toMerge
-                     else
-                        tailToInsert
-                    )
+                if mergedLen == branchFactor then
+                    { tail = JsArray.slice (tailLen - leftOver) tailLen tail
+                    , nodeList = (Leaf merged) :: builder.nodeList
+                    , nodeListSize = builder.nodeListSize + 1
+                    }
+                else
+                    { tail = merged
+                    , nodeList = builder.nodeList
+                    , nodeListSize = builder.nodeListSize
+                    }
     in
-        JsArray.foldl helper a bTree
-            |> tailMerge bTail
+        JsArray.foldl foldHelper builder bTree
+            |> appendTail bTail
+            |> builderToArray
 
 
 {-| Get a sub-section of an array: `(slice start end array)`. The `start` is a
@@ -843,3 +832,113 @@ hoistTree oldShift newShift tree =
 
             Leaf _ ->
                 tree
+
+
+
+-- Builder
+
+
+type alias Builder a =
+    { tail : JsArray a
+    , nodeList : List (Node a)
+    , nodeListSize : Int
+    }
+
+
+emptyBuilder : Builder a
+emptyBuilder =
+    { tail = JsArray.empty
+    , nodeList = []
+    , nodeListSize = 0
+    }
+
+
+builderFromArray : Array a -> Builder a
+builderFromArray (Array _ _ tree tail) =
+    let
+        helper node (( nodeList, nodeListSize ) as acc) =
+            case node of
+                SubTree tree ->
+                    JsArray.foldl helper acc tree
+
+                Leaf _ ->
+                    ( node :: nodeList, nodeListSize + 1 )
+
+        ( nodeList, nodeListSize ) =
+            JsArray.foldl helper ( [], 0 ) tree
+    in
+        { tail = tail
+        , nodeList = nodeList
+        , nodeListSize = nodeListSize
+        }
+
+
+builderToArray : Builder a -> Array a
+builderToArray builder =
+    if builder.nodeListSize == 0 then
+        Array
+            (JsArray.length builder.tail)
+            shiftStep
+            JsArray.empty
+            builder.tail
+    else
+        let
+            treeLen =
+                builder.nodeListSize * branchFactor
+
+            requiredTreeHeight =
+                treeLen
+                    |> toFloat
+                    |> logBase (toFloat branchFactor)
+                    |> floor
+
+            tree =
+                treeFromBuilder
+                    (List.reverse builder.nodeList)
+                    builder.nodeListSize
+        in
+            Array
+                (JsArray.length builder.tail + treeLen)
+                (requiredTreeHeight * shiftStep)
+                tree
+                builder.tail
+
+
+treeFromBuilder : List (Node a) -> Int -> Tree a
+treeFromBuilder nodeList nodeListSize =
+    let
+        newNodeSize =
+            ((toFloat nodeListSize) / (toFloat branchFactor))
+                |> ceiling
+    in
+        if newNodeSize == 1 then
+            -- Check for overflow
+            if nodeListSize == 32 then
+                JsArray.listInitialize nodeList branchFactor
+                    |> Tuple.second
+                    |> SubTree
+                    |> JsArray.singleton
+            else
+                JsArray.listInitialize nodeList branchFactor
+                    |> Tuple.second
+        else
+            treeFromBuilder
+                (compressNodes nodeList [])
+                newNodeSize
+
+
+compressNodes : List (Node a) -> List (Node a) -> List (Node a)
+compressNodes nodes acc =
+    let
+        ( newNodes, jsArray ) =
+            JsArray.listInitialize nodes branchFactor
+
+        newAcc =
+            (SubTree jsArray) :: acc
+    in
+        case newNodes of
+            [] ->
+                List.reverse newAcc
+
+            _ ->
+                compressNodes newNodes newAcc
