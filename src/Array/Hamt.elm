@@ -257,7 +257,7 @@ Notice that `repeat 3 x` is the same as `initialize 3 (always x)`.
 -}
 repeat : Int -> a -> Array a
 repeat n e =
-    initialize n (always e)
+    initialize n (\_ -> e)
 
 
 {-| Create an array from a `List`.
