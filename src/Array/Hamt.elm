@@ -173,79 +173,67 @@ the element at index `i` initialized to the result of `(f i)`.
     initialize 4 (always 0)  == fromList [0,0,0,0]
 -}
 initialize : Int -> (Int -> a) -> Array a
-initialize stop f =
-    if stop <= 0 then
+initialize length fn =
+    if length <= 0 then
         empty
-    else if stop < branchFactor then
-        Array stop shiftStep JsArray.empty <|
-            JsArray.initialize stop 0 f
+    else if length < branchFactor then
+        Array length shiftStep JsArray.empty <|
+            JsArray.initialize length 0 fn
     else
         let
-            tailLen =
-                Bitwise.and bitMask stop
+            tailLength =
+                length - (tailPrefix length)
 
-            treeLen =
-                stop - tailLen
+            treeLength =
+                length - tailLength
 
-            requiredTreeHeight =
-                treeLen
+            depth =
+                treeLength
                     |> toFloat
                     |> logBase (toFloat branchFactor)
                     |> floor
 
-            subTreeSize =
-                branchFactor ^ requiredTreeHeight
+            tree =
+                case initializeHelp depth 0 treeLength fn of
+                    SubTree tree ->
+                        tree
 
-            numberOfSubTrees =
-                ceiling ((toFloat treeLen) / (toFloat subTreeSize))
-
-            nextSubTreeSize =
-                subTreeSize // branchFactor
-
-            helper idx =
-                let
-                    startIndex =
-                        subTreeSize * idx
-
-                    stopIndex =
-                        min (startIndex + subTreeSize) treeLen
-                in
-                    initializeHelp nextSubTreeSize startIndex stopIndex f
+                    Leaf leaf ->
+                        JsArray.singleton <| Leaf leaf
         in
             Array
-                stop
-                (requiredTreeHeight * shiftStep)
-                (JsArray.initialize numberOfSubTrees 0 helper)
-                (JsArray.initialize tailLen treeLen f)
+                length
+                (depth * shiftStep)
+                tree
+                (JsArray.initialize tailLength treeLength fn)
 
 
 initializeHelp : Int -> Int -> Int -> (Int -> a) -> Node a
-initializeHelp subTreeSize startIndex stopIndex f =
-    let
-        len =
-            stopIndex - startIndex
-    in
-        if len == branchFactor then
-            Leaf <| JsArray.initialize branchFactor startIndex f
-        else
-            let
-                numberOfSubTrees =
-                    ceiling ((toFloat len) / (toFloat subTreeSize))
+initializeHelp depth fromIndex toIndex fn =
+    if depth == 0 then
+        Leaf <| JsArray.initialize branchFactor fromIndex fn
+    else
+        let
+            step =
+                branchFactor ^ depth
 
-                nextSubTreeSize =
-                    subTreeSize // branchFactor
+            subTreeLength =
+                ((toFloat (toIndex - fromIndex)) / (toFloat step))
+                    |> ceiling
 
-                helper idx =
-                    let
-                        start =
-                            startIndex + (subTreeSize * idx)
+            helper index =
+                let
+                    from =
+                        fromIndex + (index * step)
 
-                        stop =
-                            min (start + subTreeSize) stopIndex
-                    in
-                        initializeHelp nextSubTreeSize start stop f
-            in
-                SubTree <| JsArray.initialize numberOfSubTrees 0 helper
+                    to =
+                        min
+                            (fromIndex + ((index + 1) * step))
+                            toIndex
+                in
+                    initializeHelp (depth - 1) from to fn
+        in
+            SubTree <| JsArray.initialize subTreeLength 0 helper
 
 
 {-| Creates an array with a given length, filled with a default element.
