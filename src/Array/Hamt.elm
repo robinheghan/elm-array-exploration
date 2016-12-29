@@ -447,7 +447,16 @@ pushTailHelp shift idx tail tree =
             Bitwise.and bitMask <| Bitwise.shiftRightZfBy shift idx
     in
         if pos >= JsArray.length tree then
-            JsArray.push (Leaf tail) tree
+            if shift == 5 then
+                JsArray.push (Leaf tail) tree
+            else
+                let
+                    newSub =
+                        JsArray.empty
+                            |> pushTailHelp (shift - shiftStep) idx tail
+                            |> SubTree
+                in
+                    JsArray.push newSub tree
         else
             let
                 val =
@@ -457,17 +466,20 @@ pushTailHelp shift idx tail tree =
                     SubTree subTree ->
                         let
                             newSub =
-                                pushTailHelp (shift - shiftStep) idx tail subTree
+                                subTree
+                                    |> pushTailHelp (shift - shiftStep) idx tail
+                                    |> SubTree
                         in
-                            JsArray.unsafeSet pos (SubTree newSub) tree
+                            JsArray.unsafeSet pos newSub tree
 
                     Leaf _ ->
                         let
                             newSub =
                                 JsArray.singleton val
                                     |> pushTailHelp (shift - shiftStep) idx tail
+                                    |> SubTree
                         in
-                            JsArray.unsafeSet pos (SubTree newSub) tree
+                            JsArray.unsafeSet pos newSub tree
 
 
 {-| Create a list of elements from an array.
@@ -769,34 +781,13 @@ sliceTree shift endIdx tree =
                     newSub =
                         sliceTree (shift - shiftStep) endIdx sub
                 in
-                    case JsArray.length newSub of
-                        -- The sub is empty, slice it away
-                        0 ->
-                            JsArray.slice 0 lastPos tree
-
-                        -- Only contains a single element, promote it if
-                        -- it is a `Leaf`. See documentation on `hoistTree`.
-                        1 ->
-                            let
-                                val =
-                                    JsArray.unsafeGet 0 newSub
-
-                                nodeToInsert =
-                                    case val of
-                                        SubTree _ ->
-                                            SubTree newSub
-
-                                        Leaf _ ->
-                                            val
-                            in
-                                tree
-                                    |> JsArray.slice 0 (lastPos + 1)
-                                    |> JsArray.unsafeSet lastPos nodeToInsert
-
-                        _ ->
-                            tree
-                                |> JsArray.slice 0 (lastPos + 1)
-                                |> JsArray.unsafeSet lastPos (SubTree newSub)
+                    -- The sub is empty, slice it away
+                    if JsArray.length newSub == 0 then
+                        JsArray.slice 0 lastPos tree
+                    else
+                        tree
+                            |> JsArray.slice 0 (lastPos + 1)
+                            |> JsArray.unsafeSet lastPos (SubTree newSub)
 
             -- This is supposed to be the new tail. Slice up to, but not including,
             -- this point.
