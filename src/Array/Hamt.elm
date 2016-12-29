@@ -180,60 +180,33 @@ initialize length fn =
         Array length shiftStep JsArray.empty <|
             JsArray.initialize length 0 fn
     else
-        let
-            tailLength =
-                length - (tailPrefix length)
-
-            treeLength =
-                length - tailLength
-
-            depth =
-                treeLength
-                    |> toFloat
-                    |> logBase (toFloat branchFactor)
-                    |> floor
-
-            tree =
-                case initializeHelp depth 0 treeLength fn of
-                    SubTree tree ->
-                        tree
-
-                    Leaf leaf ->
-                        JsArray.singleton <| Leaf leaf
-        in
-            Array
-                length
-                (depth * shiftStep)
-                tree
-                (JsArray.initialize tailLength treeLength fn)
+        initializeHelp 0 length fn emptyBuilder
+            |> builderToArray
 
 
-initializeHelp : Int -> Int -> Int -> (Int -> a) -> Node a
-initializeHelp depth fromIndex toIndex fn =
-    if depth == 0 then
-        Leaf <| JsArray.initialize branchFactor fromIndex fn
-    else
-        let
-            step =
-                branchFactor ^ depth
+initializeHelp : Int -> Int -> (Int -> a) -> Builder a -> Builder a
+initializeHelp fromIndex toIndex fn builder =
+    let
+        nodeSize =
+            min 32 (toIndex - fromIndex)
 
-            subTreeLength =
-                ((toFloat (toIndex - fromIndex)) / (toFloat step))
-                    |> ceiling
-
-            helper index =
-                let
-                    from =
-                        fromIndex + (index * step)
-
-                    to =
-                        min
-                            (fromIndex + ((index + 1) * step))
-                            toIndex
-                in
-                    initializeHelp (depth - 1) from to fn
-        in
-            SubTree <| JsArray.initialize subTreeLength 0 helper
+        node =
+            JsArray.initialize nodeSize fromIndex fn
+    in
+        if nodeSize < branchFactor then
+            { tail = node
+            , nodeList = builder.nodeList
+            , nodeListSize = builder.nodeListSize
+            }
+        else
+            initializeHelp
+                (fromIndex + nodeSize)
+                toIndex
+                fn
+                { tail = builder.tail
+                , nodeList = (Leaf node) :: builder.nodeList
+                , nodeListSize = builder.nodeListSize + 1
+                }
 
 
 {-| Creates an array with a given length, filled with a default element.
