@@ -838,7 +838,7 @@ builderToArray builder =
             treeLen =
                 builder.nodeListSize * branchFactor
 
-            requiredTreeHeight =
+            depth =
                 treeLen
                     |> toFloat
                     |> logBase (toFloat branchFactor)
@@ -851,8 +851,8 @@ builderToArray builder =
         in
             Array
                 (JsArray.length builder.tail + treeLen)
-                (requiredTreeHeight * shiftStep)
-                tree
+                (depth * shiftStep)
+                (ensureTreeDepth depth tree)
                 builder.tail
 
 
@@ -864,15 +864,8 @@ treeFromBuilder nodeList nodeListSize =
                 |> ceiling
     in
         if newNodeSize == 1 then
-            -- Check for overflow
-            if nodeListSize == 32 then
-                JsArray.listInitialize nodeList branchFactor
-                    |> Tuple.second
-                    |> SubTree
-                    |> JsArray.singleton
-            else
-                JsArray.listInitialize nodeList branchFactor
-                    |> Tuple.second
+            JsArray.listInitialize nodeList branchFactor
+                |> Tuple.second
         else
             treeFromBuilder
                 (compressNodes nodeList [])
@@ -894,3 +887,23 @@ compressNodes nodes acc =
 
             _ ->
                 compressNodes newNodes newAcc
+
+
+ensureTreeDepth : Int -> Tree a -> Tree a
+ensureTreeDepth requestedDepth tree =
+    let
+        depthMeasure acc tree =
+            case JsArray.unsafeGet 0 tree of
+                SubTree sub ->
+                    depthMeasure (acc + 1) sub
+
+                Leaf _ ->
+                    acc
+
+        actualDepth =
+            depthMeasure 1 tree
+    in
+        if actualDepth == requestedDepth then
+            tree
+        else
+            JsArray.singleton (SubTree tree)
