@@ -26,14 +26,13 @@ function listInitialize(ls, max) {
 
     for (; i < max; i++) {
         if (ls.ctor === '[]') {
+            result.length = i;
             break;
         }
 
         result[i] = ls._0;
         ls = ls._1;
     }
-
-    result.length = i;
 
     return {
         ctor: '_Tuple2',
