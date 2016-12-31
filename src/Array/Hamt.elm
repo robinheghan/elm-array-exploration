@@ -292,17 +292,6 @@ get idx (Array length startShift tree tail) =
         Just <| getHelp startShift idx tree
 
 
-{-| Does not perform bounds checking.
-Make sure you know the index is within bounds before using.
--}
-unsafeGet : Int -> Array a -> a
-unsafeGet idx (Array length startShift tree tail) =
-    if idx >= tailPrefix length then
-        JsArray.unsafeGet (Bitwise.and bitMask idx) tail
-    else
-        getHelp startShift idx tree
-
-
 getHelp : Int -> Int -> Tree a -> a
 getHelp shift idx tree =
     let
@@ -567,7 +556,12 @@ indexedMap : (Int -> a -> b) -> Array a -> Array b
 indexedMap f ((Array length _ _ _) as arr) =
     let
         helper idx =
-            f idx <| unsafeGet idx arr
+            case get idx arr of
+                Just value ->
+                    f idx value
+
+                Nothing ->
+                    Debug.crash "Cannot happen"
     in
         initialize length helper
 
@@ -653,7 +647,12 @@ slice from to arr =
                     correctTo - correctFrom
 
                 helper i =
-                    unsafeGet (i + correctFrom) arr
+                    case get (i + correctFrom) arr of
+                        Just value ->
+                            value
+
+                        Nothing ->
+                            Debug.crash "Cannot happen"
             in
                 initialize len helper
         else

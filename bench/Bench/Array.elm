@@ -13,11 +13,6 @@ largeArraySize =
     10000
 
 
-buildByPush : List Int -> () -> Input
-buildByPush ls =
-    \() -> List.foldl Array.push Array.empty ls
-
-
 buildByInitialize : Int -> () -> Input
 buildByInitialize n =
     \() -> Array.initialize n identity
@@ -110,9 +105,7 @@ createSuite n =
         equalButDifferentSample =
             buildByInitialize n ()
     in
-        [ bench "Build by push" <|
-            buildByPush sampleList
-        , bench "Build by initialize" <|
+        [ bench "Build by initialize" <|
             buildByInitialize n
         , bench "Set" <|
             set sampleArray
