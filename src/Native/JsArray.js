@@ -145,6 +145,23 @@ function map(f, arr) {
     return result;
 }
 
+function indexedMap(f, offset, arr) {
+    var len = arr.length;
+
+    var result;
+    if (len === 32) {
+        result = array32();
+    } else {
+        result = new Array(len);
+    }
+
+    for (var i = 0; i < len; i++) {
+        result[i] = A2(f, offset + i, arr[i]);
+    }
+
+    return result;
+}
+
 function slice(from, to, arr) {
     return arr.slice(from, to);
 }
@@ -189,6 +206,7 @@ return {
     foldl: F3(foldl),
     foldr: F3(foldr),
     map: F2(map),
+    indexedMap: F3(indexedMap),
     slice: F3(slice),
     merge: F3(merge)
 };

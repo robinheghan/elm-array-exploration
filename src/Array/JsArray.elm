@@ -12,6 +12,7 @@ module Array.JsArray
         , foldl
         , foldr
         , map
+        , indexedMap
         , slice
         , merge
         )
@@ -139,6 +140,16 @@ foldr =
 map : (a -> b) -> JsArray a -> JsArray b
 map =
     Native.JsArray.map
+
+
+{-| Apply a function on every element and its index in an array.
+An offset allows to modify the index passed to the function.
+
+    indexedMap (,) 5 (repeat 3 3) == Array [(5,3), (6,3), (7,3)]
+-}
+indexedMap : (Int -> a -> b) -> Int -> JsArray a -> JsArray b
+indexedMap =
+    Native.JsArray.indexedMap
 
 
 {-| Get a sub section of an array: `(slice start end array)`.

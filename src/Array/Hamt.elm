@@ -553,17 +553,34 @@ map f (Array length startShift tree tail) =
     indexedMap (*) (fromList [5,5,5]) == fromList [0,5,10]
 -}
 indexedMap : (Int -> a -> b) -> Array a -> Array b
-indexedMap f ((Array length _ _ _) as arr) =
+indexedMap f ((Array length _ tree tail) as arr) =
     let
-        helper idx =
-            case get idx arr of
-                Just value ->
-                    f idx value
+        helper node builder =
+            case node of
+                SubTree subTree ->
+                    JsArray.foldl helper builder subTree
 
-                Nothing ->
-                    Debug.crash "Cannot happen"
+                Leaf leaf ->
+                    let
+                        offset =
+                            builder.nodeListSize * 32
+
+                        mappedLeaf =
+                            Leaf <| JsArray.indexedMap f offset leaf
+                    in
+                        { tail = builder.tail
+                        , nodeList = mappedLeaf :: builder.nodeList
+                        , nodeListSize = builder.nodeListSize + 1
+                        }
+
+        initialBuilder =
+            { tail = JsArray.indexedMap f (tailPrefix length) tail
+            , nodeList = []
+            , nodeListSize = 0
+            }
     in
-        initialize length helper
+        JsArray.foldl helper initialBuilder tree
+            |> builderToArray
 
 
 {-| Append one array onto another one.
