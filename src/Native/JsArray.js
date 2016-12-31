@@ -11,11 +11,14 @@ function length(arr) {
 }
 
 function initialize(size, offset, f) {
-    if (size === 32) {
-        return initialize32(offset, f);
-    }
 
-    var result = [];
+    // Optimize for common pattern of 32-sized arrays
+    var result;
+    if (size === 32) {
+        result = array32();
+    } else {
+        result = new Array(size);
+    }
 
     for (var i = 0; i < size; i++) {
         result[i] = f(offset + i);
@@ -24,49 +27,56 @@ function initialize(size, offset, f) {
     return result;
 }
 
-function initialize32(offset, f) {
+function array32() {
     return [
-        f(offset),
-        f(offset + 1),
-        f(offset + 2),
-        f(offset + 3),
-        f(offset + 4),
-        f(offset + 5),
-        f(offset + 6),
-        f(offset + 7),
-        f(offset + 8),
-        f(offset + 9),
-        f(offset + 10),
-        f(offset + 11),
-        f(offset + 12),
-        f(offset + 13),
-        f(offset + 14),
-        f(offset + 15),
-        f(offset + 16),
-        f(offset + 17),
-        f(offset + 18),
-        f(offset + 19),
-        f(offset + 20),
-        f(offset + 21),
-        f(offset + 22),
-        f(offset + 23),
-        f(offset + 24),
-        f(offset + 25),
-        f(offset + 26),
-        f(offset + 27),
-        f(offset + 28),
-        f(offset + 29),
-        f(offset + 30),
-        f(offset + 31)
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
     ];
 }
 
 function listInitialize(ls, max) {
-    var result = [];
+    var result;
+    if (max === 32) {
+        result = array32();
+    } else {
+        result = new Array(max);
+    }
+
     var i = 0;
 
     for (; i < max; i++) {
         if (ls.ctor === '[]') {
+            result.length = i;
             break;
         }
 
@@ -120,7 +130,13 @@ function foldr(f, init, arr) {
 
 function map(f, arr) {
     var len = arr.length;
-    var result = new Array(len);
+
+    var result;
+    if (len === 32) {
+        result = array32();
+    } else {
+        result = new Array(len);
+    }
 
     for (var i = 0; i < len; i++) {
         result[i] = f(arr[i]);
@@ -141,7 +157,14 @@ function merge(dest, source, max) {
         itemsToCopy = source.length;
     }
 
-    var result = new Array(destLen + itemsToCopy);
+    var size = destLen + itemsToCopy;
+
+    var result;
+    if (size === 32) {
+        result = array32();
+    } else {
+        result = new Array(size);
+    }
 
     for (var i = 0; i < destLen; i++) {
         result[i] = dest[i];
