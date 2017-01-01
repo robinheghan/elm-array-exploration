@@ -176,9 +176,6 @@ initialize : Int -> (Int -> a) -> Array a
 initialize length fn =
     if length <= 0 then
         empty
-    else if length < branchFactor then
-        Array length shiftStep JsArray.empty <|
-            JsArray.initialize length 0 fn
     else
         initializeHelp 0 length fn emptyBuilder
             |> builderToArray
@@ -188,7 +185,7 @@ initializeHelp : Int -> Int -> (Int -> a) -> Builder a -> Builder a
 initializeHelp fromIndex toIndex fn builder =
     let
         nodeSize =
-            min 32 (toIndex - fromIndex)
+            min branchFactor (toIndex - fromIndex)
 
         node =
             JsArray.initialize nodeSize fromIndex fn
@@ -563,7 +560,7 @@ indexedMap f ((Array length _ tree tail) as arr) =
                 Leaf leaf ->
                     let
                         offset =
-                            builder.nodeListSize * 32
+                            builder.nodeListSize * branchFactor
 
                         mappedLeaf =
                             Leaf <| JsArray.indexedMap f offset leaf
@@ -810,7 +807,7 @@ sliceLeft from ((Array _ _ tree tail) as arr) =
                 JsArray.foldr helper [ tail ] tree
 
             skipNodes =
-                from // 32
+                from // branchFactor
 
             nodesToInsert =
                 List.drop skipNodes leafNodes
@@ -822,7 +819,7 @@ sliceLeft from ((Array _ _ tree tail) as arr) =
                 x :: xs ->
                     let
                         firstSlice =
-                            from - (skipNodes * 32)
+                            from - (skipNodes * branchFactor)
 
                         initialBuilder =
                             { tail =
@@ -858,22 +855,19 @@ emptyBuilder =
 
 
 builderFromArray : Array a -> Builder a
-builderFromArray (Array _ _ tree tail) =
+builderFromArray (Array length _ tree tail) =
     let
-        helper node (( nodeList, nodeListSize ) as acc) =
+        helper node acc =
             case node of
                 SubTree tree ->
                     JsArray.foldl helper acc tree
 
                 Leaf _ ->
-                    ( node :: nodeList, nodeListSize + 1 )
-
-        ( nodeList, nodeListSize ) =
-            JsArray.foldl helper ( [], 0 ) tree
+                    node :: acc
     in
         { tail = tail
-        , nodeList = nodeList
-        , nodeListSize = nodeListSize
+        , nodeList = JsArray.foldl helper [] tree
+        , nodeListSize = length // branchFactor
         }
 
 
