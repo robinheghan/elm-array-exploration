@@ -599,36 +599,38 @@ append a (Array _ _ bTree bTail) =
                     JsArray.foldl foldHelper builder tree
 
                 Leaf leaf ->
-                    appendTail leaf builder
-
-        appendTail tail builder =
-            let
-                merged =
-                    JsArray.merge builder.tail tail branchFactor
-
-                mergedLen =
-                    JsArray.length merged
-
-                tailLen =
-                    JsArray.length tail
-
-                leftOver =
-                    max 0 <| (JsArray.length builder.tail) + tailLen - branchFactor
-            in
-                if mergedLen == branchFactor then
-                    { tail = JsArray.slice (tailLen - leftOver) tailLen tail
-                    , nodeList = (Leaf merged) :: builder.nodeList
-                    , nodeListSize = builder.nodeListSize + 1
-                    }
-                else
-                    { tail = merged
-                    , nodeList = builder.nodeList
-                    , nodeListSize = builder.nodeListSize
-                    }
+                    appendHelp leaf builder
     in
         JsArray.foldl foldHelper builder bTree
-            |> appendTail bTail
+            |> appendHelp bTail
             |> builderToArray
+
+
+appendHelp : JsArray a -> Builder a -> Builder a
+appendHelp tail builder =
+    let
+        merged =
+            JsArray.merge builder.tail tail branchFactor
+
+        mergedLen =
+            JsArray.length merged
+
+        tailLen =
+            JsArray.length tail
+
+        leftOver =
+            max 0 <| (JsArray.length builder.tail) + tailLen - branchFactor
+    in
+        if mergedLen == branchFactor then
+            { tail = JsArray.slice (tailLen - leftOver) tailLen tail
+            , nodeList = (Leaf merged) :: builder.nodeList
+            , nodeListSize = builder.nodeListSize + 1
+            }
+        else
+            { tail = merged
+            , nodeList = builder.nodeList
+            , nodeListSize = builder.nodeListSize
+            }
 
 
 {-| Get a sub-section of an array: `(slice start end array)`. The `start` is a
@@ -658,22 +660,10 @@ slice from to arr =
     in
         if correctFrom > correctTo then
             empty
-        else if correctFrom > 0 then
-            let
-                len =
-                    correctTo - correctFrom
-
-                helper i =
-                    case get (i + correctFrom) arr of
-                        Just value ->
-                            value
-
-                        Nothing ->
-                            Debug.crash "Cannot happen"
-            in
-                initialize len helper
         else
-            sliceRight correctTo arr
+            arr
+                |> sliceRight correctTo
+                |> sliceLeft correctFrom
 
 
 {-| Given a relative array index, convert it into an absolute one.
@@ -800,6 +790,52 @@ hoistTree oldShift newShift tree =
 
             Leaf _ ->
                 tree
+
+
+sliceLeft : Int -> Array a -> Array a
+sliceLeft from ((Array _ _ tree tail) as arr) =
+    if from == 0 then
+        arr
+    else
+        let
+            helper node acc =
+                case node of
+                    SubTree subTree ->
+                        JsArray.foldr helper acc subTree
+
+                    Leaf leaf ->
+                        leaf :: acc
+
+            leafNodes =
+                JsArray.foldr helper [ tail ] tree
+
+            skipNodes =
+                from // 32
+
+            nodesToInsert =
+                List.drop skipNodes leafNodes
+        in
+            case nodesToInsert of
+                [] ->
+                    empty
+
+                x :: xs ->
+                    let
+                        firstSlice =
+                            from - (skipNodes * 32)
+
+                        initialBuilder =
+                            { tail =
+                                JsArray.slice
+                                    firstSlice
+                                    (JsArray.length x)
+                                    x
+                            , nodeList = []
+                            , nodeListSize = 0
+                            }
+                    in
+                        List.foldl appendHelp initialBuilder xs
+                            |> builderToArray
 
 
 
