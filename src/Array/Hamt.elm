@@ -177,12 +177,11 @@ initialize length fn =
     if length <= 0 then
         empty
     else
-        initializeHelp 0 length fn emptyBuilder
-            |> builderToArray
+        initializeHelp 0 length length fn []
 
 
-initializeHelp : Int -> Int -> (Int -> a) -> Builder a -> Builder a
-initializeHelp fromIndex toIndex fn builder =
+initializeHelp : Int -> Int -> Int -> (Int -> a) -> List (Node a) -> Array a
+initializeHelp fromIndex toIndex length fn nodeList =
     let
         nodeSize =
             min branchFactor (toIndex - fromIndex)
@@ -191,19 +190,18 @@ initializeHelp fromIndex toIndex fn builder =
             JsArray.initialize nodeSize fromIndex fn
     in
         if nodeSize < branchFactor then
-            { tail = node
-            , nodeList = builder.nodeList
-            , nodeListSize = builder.nodeListSize
-            }
+            builderToArray
+                { tail = node
+                , nodeList = nodeList
+                , nodeListSize = length // branchFactor
+                }
         else
             initializeHelp
                 (fromIndex + nodeSize)
                 toIndex
+                length
                 fn
-                { tail = builder.tail
-                , nodeList = (Leaf node) :: builder.nodeList
-                , nodeListSize = builder.nodeListSize + 1
-                }
+                ((Leaf node) :: nodeList)
 
 
 {-| Creates an array with a given length, filled with a default element.
@@ -227,33 +225,26 @@ fromList ls =
             empty
 
         _ ->
-            fromListHelp ls emptyBuilder
+            fromListHelp ls [] 0
 
 
-fromListHelp : List a -> Builder a -> Array a
-fromListHelp list builder =
+fromListHelp : List a -> List (Node a) -> Int -> Array a
+fromListHelp list nodeList nodeListSize =
     let
-        ( newList, jsArray ) =
+        ( remainingItems, jsArray ) =
             JsArray.listInitialize list branchFactor
-
-        newBuilder =
-            if JsArray.length jsArray == branchFactor then
-                { tail = builder.tail
-                , nodeList = (Leaf jsArray) :: builder.nodeList
-                , nodeListSize = builder.nodeListSize + 1
-                }
-            else
-                { tail = jsArray
-                , nodeList = builder.nodeList
-                , nodeListSize = builder.nodeListSize
-                }
     in
-        case newList of
-            [] ->
-                builderToArray newBuilder
-
-            _ ->
-                fromListHelp newList newBuilder
+        if JsArray.length jsArray == branchFactor then
+            fromListHelp
+                remainingItems
+                ((Leaf jsArray) :: nodeList)
+                (nodeListSize + 1)
+        else
+            builderToArray
+                { tail = jsArray
+                , nodeList = nodeList
+                , nodeListSize = nodeListSize
+                }
 
 
 {-| Return the array represented as a string.
@@ -709,11 +700,14 @@ sliceRight end ((Array length startShift tree tail) as arr) =
             endIdx =
                 tailPrefix end
 
+            depth =
+                end
+                    |> toFloat
+                    |> logBase (toFloat branchFactor)
+                    |> floor
+
             newShift =
-                if end < branchFactor then
-                    shiftStep
-                else
-                    (end |> toFloat |> logBase (toFloat branchFactor) |> floor) * shiftStep
+                depth * shiftStep
         in
             Array end
                 newShift
@@ -790,9 +784,12 @@ hoistTree oldShift newShift tree =
 
 
 sliceLeft : Int -> Array a -> Array a
-sliceLeft from ((Array _ _ tree tail) as arr) =
+sliceLeft from ((Array length _ tree tail) as arr) =
     if from == 0 then
         arr
+    else if from >= tailPrefix length then
+        Array (length - from) shiftStep JsArray.empty <|
+            JsArray.slice from (JsArray.length tail) tail
     else
         let
             helper node acc =
