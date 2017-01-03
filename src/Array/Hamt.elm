@@ -47,7 +47,6 @@ module Array.Hamt
 -}
 
 import Bitwise
-import Tuple
 import Array.JsArray as JsArray exposing (JsArray)
 
 
@@ -59,11 +58,12 @@ The higher the branching factor, the more elements are stored at each level.
 This makes writes slower (more to copy per level), but reads faster
 (fewer traversals). In practice, 32 is a good compromise.
 
-Has to be a power of two (8, 16, 32, 64...). This is because we use the
-index to tell us which path to take when navigating the tree, and we do
-this by dividing it into several smaller numbers (see `shiftStep` documentation).
-By dividing the index into smaller numbers, we will always get a range
-which is a power of two (2 bits gives 0-3, 3 gives 0-7, 4 gives 0-15...).
+The branching factor has to be a power of two (8, 16, 32, 64...). This is
+because we use the index to tell us which path to take when navigating the
+tree, and we do this by dividing it into several smaller numbers (see
+`shiftStep` documentation). By dividing the index into smaller numbers, we
+will always get a range which is a power of two (2 bits gives 0-3, 3 gives
+0-7, 4 gives 0-15...).
 -}
 branchFactor : Int
 branchFactor =
@@ -72,8 +72,8 @@ branchFactor =
 
 {-| A number is made up of several bits. For bitwise operations in javascript,
 numbers are treated as 32-bits integers. The number 1 is represented by 31
-zeros, and a one. The important thing to take from this, is that a 32-bit integer
-has enough information to represent several smaller numbers.
+zeros, and a one. The important thing to take from this, is that a 32-bit
+integer has enough information to represent several smaller numbers.
 
 For a branching factor of 32, a 32-bit index has enough information to store 6
 different numbers in the range of 0-31 (5 bits), and one number in the range of
@@ -81,9 +81,9 @@ different numbers in the range of 0-31 (5 bits), and one number in the range of
 of 7.
 
 An index essentially functions as a map. To figure out which branch to take at
-any given level of the tree, we need to shift (or move) the correct amount of bits
-so that those bits are at the front. We can then perform a bitwise and to read
-which of the 32 branches to take.
+any given level of the tree, we need to shift (or move) the correct amount of
+bits so that those bits are at the front. We can then perform a bitwise and to
+read which of the 32 branches to take.
 
 The `shiftStep` specifices how many bits are required to represent the branching
 factor.
@@ -108,12 +108,13 @@ dream up.
 type Array a
     = {-
          * length : Int = The length of the array.
-         * startShift : Int = How many bits to shift of the index, to get the slot
-         for the first level of the tree.
+         * startShift : Int = How many bits to shift the index to get the
+         slot for the first level of the tree.
          * tree : Tree a = The actual tree.
-         * tail : JsArray a = The tail of the array. Inserted into tree when number
-         of elements is equal to the branching factor. This is an optimization.
-         It makes operations at the end (push, pop, read, write) fast.
+         * tail : JsArray a = The tail of the array. Inserted into tree when
+         number of elements is equal to the branching factor. This is an
+         optimization. It makes operations at the end (push, pop, read, write)
+         fast.
       -}
       Array Int Int (Tree a) (JsArray a)
 
@@ -121,9 +122,6 @@ type Array a
 {-| Each level in the tree is represented by a `JsArray` of `Node`s.
 A `Node` can either be a subtree (the next level of the tree) or, if
 we're at the bottom, a `JsArray` of values (also known as a leaf).
-
-For performance reasons we try to keep the tree as compact as possible.
-This means that the tree does not necessarily have the same depth everywhere.
 -}
 type Node a
     = SubTree (Tree a)
@@ -141,8 +139,8 @@ type alias Tree a =
 empty : Array a
 empty =
     {-
-       `startShift` is only used when there is at least one `Node` in the `tree`.
-       The minimal value is therefore equal to the `shiftStep`.
+       `startShift` is only used when there is at least one `Node` in the
+       `tree`. The minimal value is therefore equal to the `shiftStep`.
     -}
     Array 0 shiftStep JsArray.empty JsArray.empty
 
@@ -234,17 +232,17 @@ fromListHelp list nodeList nodeListSize =
         ( remainingItems, jsArray ) =
             JsArray.listInitialize list branchFactor
     in
-        if JsArray.length jsArray == branchFactor then
-            fromListHelp
-                remainingItems
-                ((Leaf jsArray) :: nodeList)
-                (nodeListSize + 1)
-        else
+        if JsArray.length jsArray < branchFactor then
             builderToArray
                 { tail = jsArray
                 , nodeList = nodeList
                 , nodeListSize = nodeListSize
                 }
+        else
+            fromListHelp
+                remainingItems
+                ((Leaf jsArray) :: nodeList)
+                (nodeListSize + 1)
 
 
 {-| Return the array represented as a string.
@@ -263,7 +261,8 @@ toString array =
         "Array [" ++ elements ++ "]"
 
 
-{-| Return `Just` the element at the index or `Nothing`` if the index is out of range.
+{-| Return `Just` the element at the index or `Nothing`` if the index is out of
+range.
 
     get  0 (fromList [0,1,2]) == Just 0
     get  2 (fromList [0,1,2]) == Just 2
@@ -274,7 +273,7 @@ get : Int -> Array a -> Maybe a
 get idx (Array length startShift tree tail) =
     if idx < 0 || idx >= length then
         Nothing
-    else if idx >= tailPrefix length then
+    else if idx >= tailIndex length then
         Just <| JsArray.unsafeGet (Bitwise.and bitMask idx) tail
     else
         Just <| getHelp startShift idx tree
@@ -294,6 +293,16 @@ getHelp shift idx tree =
                 JsArray.unsafeGet (Bitwise.and bitMask idx) values
 
 
+{-| Given an array length, return the index of the first element in the tail.
+Used to check if a given index references something in the tail.
+-}
+tailIndex : Int -> Int
+tailIndex len =
+    len
+        |> Bitwise.shiftRightZfBy 5
+        |> Bitwise.shiftLeftBy 5
+
+
 {-| Set the element at a particular index. Returns an updated array.
 If the index is out of range, the array is unaltered.
 
@@ -303,7 +312,7 @@ set : Int -> a -> Array a -> Array a
 set idx val ((Array length startShift tree tail) as arr) =
     if idx < 0 || idx >= length then
         arr
-    else if idx >= tailPrefix length then
+    else if idx >= tailIndex length then
         Array length startShift tree <|
             JsArray.unsafeSet (Bitwise.and bitMask idx) val tail
     else
@@ -336,16 +345,6 @@ setHelp shift idx val tree =
                     JsArray.unsafeSet pos (Leaf newLeaf) tree
 
 
-{-| Given an array length, return the index of the first element in the tail.
-Used to check if a given index references something in the tail.
--}
-tailPrefix : Int -> Int
-tailPrefix len =
-    len
-        |> Bitwise.shiftRightZfBy 5
-        |> Bitwise.shiftLeftBy 5
-
-
 {-| Push an element onto the end of an array.
 
     push 3 (fromList [1,2]) == fromList [1,2,3]
@@ -353,11 +352,11 @@ tailPrefix len =
 push : a -> Array a -> Array a
 push a (Array length startShift tree tail) =
     let
-        newTail =
+        modifiedTail =
             JsArray.push a tail
 
         tailLen =
-            JsArray.length newTail
+            JsArray.length modifiedTail
 
         newLen =
             length + 1
@@ -370,24 +369,25 @@ push a (Array length startShift tree tail) =
                 pushTailHelp startShift length newTail tree
             else
                 tree
-    in
-        Array
-            newLen
-            (if overflow then
-                startShift + shiftStep
-             else
-                startShift
-            )
-            (if overflow then
-                JsArray.singleton (SubTree newTree)
-             else
-                newTree
-            )
-            (if tailLen == branchFactor then
+
+        newTail =
+            if tailLen == branchFactor then
                 JsArray.empty
-             else
+            else
+                modifiedTail
+    in
+        if overflow then
+            Array
+                newLen
+                (startShift + shiftStep)
+                (JsArray.singleton (SubTree newTree))
                 newTail
-            )
+        else
+            Array
+                newLen
+                startShift
+                newTree
+                newTail
 
 
 pushTailHelp : Int -> Int -> JsArray a -> Tree a -> Tree a
@@ -562,7 +562,7 @@ indexedMap f ((Array length _ tree tail) as arr) =
                         }
 
         initialBuilder =
-            { tail = JsArray.indexedMap f (tailPrefix length) tail
+            { tail = JsArray.indexedMap f (tailIndex length) tail
             , nodeList = []
             , nodeListSize = 0
             }
@@ -635,7 +635,8 @@ the end of the array.
     slice  1 -1 (fromList [0,1,2,3,4]) == fromList [1,2,3]
     slice -2  5 (fromList [0,1,2,3,4]) == fromList [3,4]
 
-This makes it pretty easy to `pop` the last element off of an array: `slice 0 -1 array`
+This makes it pretty easy to `pop` the last element off of an array:
+`slice 0 -1 array`
 -}
 slice : Int -> Int -> Array a -> Array a
 slice from to arr =
@@ -677,28 +678,29 @@ translateIndex idx (Array length _ _ _) =
             posIndex
 
 
-{-| This function is an optimization for the special case when only slicing from the right.
+{-| This function slices the tree from the right.
 
 First, two things are tested:
 1. If the array does not need slicing, return the original array.
 2. If the array can be sliced by only slicing the tail, slice the tail.
 
-In any other case we need to do three things:
-1. Find the new tail in the tree, promote it to the root tail position and slice it.
+Otherwise, we do the following:
+1. Find the new tail in the tree, promote it to the root tail position and
+slice it.
 2. Slice every sub tree.
-3. Promote leaf nodes that are the sole element of a sub tree (for equality to work).
+3. Promote subTrees until the tree has the correct height.
 -}
 sliceRight : Int -> Array a -> Array a
 sliceRight end ((Array length startShift tree tail) as arr) =
     if end == length then
         arr
-    else if end >= tailPrefix length then
+    else if end >= tailIndex length then
         Array end startShift tree <|
             JsArray.slice 0 (Bitwise.and bitMask end) tail
     else
         let
             endIdx =
-                tailPrefix end
+                tailIndex end
 
             depth =
                 end
@@ -709,7 +711,8 @@ sliceRight end ((Array length startShift tree tail) as arr) =
             newShift =
                 depth * shiftStep
         in
-            Array end
+            Array
+                end
                 newShift
                 (tree
                     |> sliceTree startShift endIdx
@@ -759,16 +762,16 @@ sliceTree shift endIdx tree =
                             |> JsArray.slice 0 (lastPos + 1)
                             |> JsArray.unsafeSet lastPos (SubTree newSub)
 
-            -- This is supposed to be the new tail. Slice up to, but not including,
-            -- this point.
+            -- This is supposed to be the new tail. Fetched by fetchNewtail.
+            --Slice up to, but not including, this point.
             Leaf _ ->
                 JsArray.slice 0 lastPos tree
 
 
-{-| To keep the tree in its most compact form, `Leaf` nodes are stored as close to
-the root as possible. To make sure that slicing does not break equality, we make
-sure that this is still the case after slicing. `sliceTree` does most of the work
-in this regard, but it does not handle the root node.
+{-| The tree is supposed to be of a certain depth. Since slicing removes
+elements from the tree, it could be that the tree should have a smaller depth
+than it had originally. This function shortens the height if it is necessary
+to do so.
 -}
 hoistTree : Int -> Int -> Tree a -> Tree a
 hoistTree oldShift newShift tree =
@@ -783,11 +786,27 @@ hoistTree oldShift newShift tree =
                 tree
 
 
+{-| This function slices the tree from the left. Such an operation will change
+the index of every element after the slice. Which means that we will have to
+rebuild the array.
+
+First, two things are tested:
+1. If the array does not need slicing, return the original array.
+2. If the slice removes every element but those in the tail, slice the tail and
+set the tree to the empty array.
+
+Otherwise, we do the following:
+1. Add every leaf node in the three to a list.
+2. Drop the nodes which are supposed to be sliced away.
+3. Slice the head node of the list, which represents the start of the new array.
+4. Create a builder with the tail set as the node from the previous step.
+5. Append the remaining nodes into this builder, and create the array.
+-}
 sliceLeft : Int -> Array a -> Array a
 sliceLeft from ((Array length _ tree tail) as arr) =
     if from == 0 then
         arr
-    else if from >= tailPrefix length then
+    else if from >= tailIndex length then
         Array (length - from) shiftStep JsArray.empty <|
             JsArray.slice from (JsArray.length tail) tail
     else
@@ -813,7 +832,7 @@ sliceLeft from ((Array length _ tree tail) as arr) =
                 [] ->
                     empty
 
-                x :: xs ->
+                head :: rest ->
                     let
                         firstSlice =
                             from - (skipNodes * branchFactor)
@@ -822,20 +841,24 @@ sliceLeft from ((Array length _ tree tail) as arr) =
                             { tail =
                                 JsArray.slice
                                     firstSlice
-                                    (JsArray.length x)
-                                    x
+                                    (JsArray.length head)
+                                    head
                             , nodeList = []
                             , nodeListSize = 0
                             }
                     in
-                        List.foldl appendHelp initialBuilder xs
+                        List.foldl appendHelp initialBuilder rest
                             |> builderToArray
 
 
+{-| A builder contains all information necessary to build an array. Adding
+information to the builder is fast. A builder is therefore a suitable
+intermediary for constructing arrays.
 
--- Builder
-
-
+Due to the nature of lists, we expect `nodeList` to be in reverse order. That
+is, the first `Node` in the tree of an `Array`, should be last in the
+`nodeList`.
+-}
 type alias Builder a =
     { tail : JsArray a
     , nodeList : List (Node a)
@@ -843,6 +866,8 @@ type alias Builder a =
     }
 
 
+{-| The empty builder.
+-}
 emptyBuilder : Builder a
 emptyBuilder =
     { tail = JsArray.empty
@@ -851,6 +876,8 @@ emptyBuilder =
     }
 
 
+{-| Converts an array to a builder.
+-}
 builderFromArray : Array a -> Builder a
 builderFromArray (Array length _ tree tail) =
     let
@@ -868,6 +895,8 @@ builderFromArray (Array length _ tree tail) =
         }
 
 
+{-| Construct an array with the information in a given builder.
+-}
 builderToArray : Builder a -> Array a
 builderToArray builder =
     if builder.nodeListSize == 0 then
@@ -899,6 +928,9 @@ builderToArray builder =
                 builder.tail
 
 
+{-| Takes a list of leaves and an `Int` specifying how many leaves there are,
+and builds a tree structure to be used in an `Array`.
+-}
 treeFromBuilder : List (Node a) -> Int -> Tree a
 treeFromBuilder nodeList nodeListSize =
     let
@@ -915,6 +947,9 @@ treeFromBuilder nodeList nodeListSize =
                 newNodeSize
 
 
+{-| Takes a list of nodes and return a list of `SubTree`s containing those
+nodes.
+-}
 compressNodes : List (Node a) -> List (Node a) -> List (Node a)
 compressNodes nodes acc =
     let
@@ -932,6 +967,16 @@ compressNodes nodes acc =
                 compressNodes newNodes newAcc
 
 
+{-| When constructing an array from a builder, it is possible for the resulting
+array to have a smaller depth than required. This has to do with how we
+calculate the required depth. If you have 1024 elements in the tree, this can
+fit within two levels, but our method of calculation says we require three.
+This function corrects the few cases were this goes wrong.
+
+TODO: Might be worth looking into how we can avoid the need for this function.
+It will likely make no difference to performance, but a smaller implementation
+is a good thing.
+-}
 ensureTreeDepth : Int -> Tree a -> Tree a
 ensureTreeDepth requestedDepth tree =
     let
