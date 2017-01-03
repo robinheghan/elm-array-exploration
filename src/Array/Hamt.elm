@@ -360,34 +360,42 @@ push a (Array length startShift tree tail) =
 
         newLen =
             length + 1
-
-        overflow =
-            Bitwise.shiftRightZfBy shiftStep newLen >= Bitwise.shiftLeftBy startShift 1
-
-        newTree =
-            if tailLen == branchFactor then
-                pushTailHelp startShift length newTail tree
-            else
-                tree
-
-        newTail =
-            if tailLen == branchFactor then
-                JsArray.empty
-            else
-                modifiedTail
     in
-        if overflow then
-            Array
-                newLen
-                (startShift + shiftStep)
-                (JsArray.singleton (SubTree newTree))
-                newTail
+        if tailLen == branchFactor then
+            let
+                overflow =
+                    Bitwise.shiftRightZfBy shiftStep newLen > Bitwise.shiftLeftBy startShift 1
+            in
+                if overflow then
+                    let
+                        newShift =
+                            startShift + shiftStep
+
+                        spacyTree =
+                            JsArray.singleton (SubTree tree)
+                    in
+                        Array
+                            newLen
+                            newShift
+                            (pushTailHelp
+                                newShift
+                                length
+                                modifiedTail
+                                spacyTree
+                            )
+                            JsArray.empty
+                else
+                    Array
+                        newLen
+                        startShift
+                        (pushTailHelp startShift length modifiedTail tree)
+                        JsArray.empty
         else
             Array
                 newLen
                 startShift
-                newTree
-                newTail
+                tree
+                modifiedTail
 
 
 pushTailHelp : Int -> Int -> JsArray a -> Tree a -> Tree a
@@ -703,13 +711,13 @@ sliceRight end ((Array length startShift tree tail) as arr) =
                 tailIndex end
 
             depth =
-                end
+                (end - 1)
                     |> toFloat
                     |> logBase (toFloat branchFactor)
                     |> floor
 
             newShift =
-                depth * shiftStep
+                max 5 <| depth * shiftStep
         in
             Array
                 end
@@ -911,7 +919,7 @@ builderToArray builder =
                 builder.nodeListSize * branchFactor
 
             depth =
-                treeLen
+                (treeLen - 1)
                     |> toFloat
                     |> logBase (toFloat branchFactor)
                     |> floor
@@ -923,8 +931,8 @@ builderToArray builder =
         in
             Array
                 (JsArray.length builder.tail + treeLen)
-                (depth * shiftStep)
-                (ensureTreeDepth depth tree)
+                (max 5 <| depth * shiftStep)
+                tree
                 builder.tail
 
 
@@ -965,33 +973,3 @@ compressNodes nodes acc =
 
             _ ->
                 compressNodes newNodes newAcc
-
-
-{-| When constructing an array from a builder, it is possible for the resulting
-array to have a smaller depth than required. This has to do with how we
-calculate the required depth. If you have 1024 elements in the tree, this can
-fit within two levels, but our method of calculation says we require three.
-This function corrects the few cases were this goes wrong.
-
-TODO: Might be worth looking into how we can avoid the need for this function.
-It will likely make no difference to performance, but a smaller implementation
-is a good thing.
--}
-ensureTreeDepth : Int -> Tree a -> Tree a
-ensureTreeDepth requestedDepth tree =
-    let
-        depthMeasure acc tree =
-            case JsArray.unsafeGet 0 tree of
-                SubTree sub ->
-                    depthMeasure (acc + 1) sub
-
-                Leaf _ ->
-                    acc
-
-        actualDepth =
-            depthMeasure 1 tree
-    in
-        if actualDepth == requestedDepth then
-            tree
-        else
-            JsArray.singleton (SubTree tree)
