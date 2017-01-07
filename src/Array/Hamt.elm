@@ -708,7 +708,7 @@ sliceRight end ((Array length startShift tree tail) as arr) =
                 tailIndex end
 
             depth =
-                (end - 1)
+                (endIdx - 1)
                     |> toFloat
                     |> logBase (toFloat branchFactor)
                     |> floor
