@@ -5,7 +5,7 @@ module Array.JsArray
         , singleton
         , length
         , initialize
-        , listInitialize
+        , initializeFromList
         , unsafeGet
         , unsafeSet
         , push
@@ -14,7 +14,7 @@ module Array.JsArray
         , map
         , indexedMap
         , slice
-        , merge
+        , appendN
         )
 
 {-| This library provides an immutable version of native javascript arrays.
@@ -79,9 +79,9 @@ initialize =
     Native.JsArray.initialize
 
 
-{-| Initialize an array from a list. `listInitialize ls n` creates an array of,
+{-| Initialize an array from a list. `initializeFromList n ls` creates an array of,
 at most, `n` elements from the list. The return value is a tuple containing the
-list without the first `n` elements, as well as the created array.
+created array as well as a list without the first `n` elements.
 
 This function was created specifically for the `Array` module, which never wants
 to create `JsArray`s above a certain size. That being said, because every
@@ -89,9 +89,9 @@ manipulation of `JsArray` results in a copy, users should always try to keep
 these as small as possible. The `n` parameter should always be set to a
 reasonably small value.
 -}
-listInitialize : List a -> Int -> ( List a, JsArray a )
-listInitialize =
-    Native.JsArray.listInitialize
+initializeFromList : Int -> List a -> ( JsArray a, List a )
+initializeFromList =
+    Native.JsArray.initializeFromList
 
 
 {-| Returns the element at the given index.
@@ -168,12 +168,11 @@ slice =
     Native.JsArray.slice
 
 
-{-| Appends one array onto another: `(merge a b max)`.
-`max` elements is appended from `b` onto `a`.
+{-| Appends `n` elements from array `b` onto array `a`: `(appendN n a b)`.
 
-The `max` parameter is required by the `Array` module, which never wants to
+The `n` parameter is required by the `Array` module, which never wants to
 create `JsArray`s above a certain size, even when appending.
 -}
-merge : JsArray a -> JsArray a -> Int -> JsArray a
-merge =
-    Native.JsArray.merge
+appendN : Int -> JsArray a -> JsArray a -> JsArray a
+appendN =
+    Native.JsArray.appendN

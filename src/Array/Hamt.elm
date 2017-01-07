@@ -187,6 +187,7 @@ initializeHelp fromIndex toIndex length fn nodeList =
         node =
             JsArray.initialize nodeSize fromIndex fn
     in
+        -- Only the tail has a different size than `branchFactor`
         if nodeSize < branchFactor then
             builderToArray
                 { tail = node
@@ -229,8 +230,8 @@ fromList ls =
 fromListHelp : List a -> List (Node a) -> Int -> Array a
 fromListHelp list nodeList nodeListSize =
     let
-        ( remainingItems, jsArray ) =
-            JsArray.listInitialize list branchFactor
+        ( jsArray, remainingItems ) =
+            JsArray.initializeFromList branchFactor list
     in
         if JsArray.length jsArray < branchFactor then
             builderToArray
@@ -252,13 +253,13 @@ fromListHelp list nodeList nodeListSize =
 toString : Array a -> String
 toString array =
     let
-        elements =
+        content =
             array
                 |> map Basics.toString
                 |> toList
                 |> String.join ","
     in
-        "Array [" ++ elements ++ "]"
+        "Array [" ++ content ++ "]"
 
 
 {-| Return `Just` the element at the index or `Nothing`` if the index is out of
@@ -294,7 +295,7 @@ getHelp shift idx tree =
 
 
 {-| Given an array length, return the index of the first element in the tail.
-Used to check if a given index references something in the tail.
+Commonly used to check if a given index references something in the tail.
 -}
 tailIndex : Int -> Int
 tailIndex len =
@@ -377,12 +378,7 @@ push a (Array length startShift tree tail) =
                         Array
                             newLen
                             newShift
-                            (pushTailHelp
-                                newShift
-                                length
-                                modifiedTail
-                                spacyTree
-                            )
+                            (pushTailHelp newShift length modifiedTail spacyTree)
                             JsArray.empty
                 else
                     Array
@@ -460,7 +456,8 @@ toIndexedList ((Array length _ _ _) as arr) =
         helper n ( idx, ls ) =
             ( idx - 1, ( idx, n ) :: ls )
     in
-        Tuple.second <| foldr helper ( length - 1, [] ) arr
+        foldr helper ( length - 1, [] ) arr
+            |> Tuple.second
 
 
 {-| Reduce an array from the right. Read `foldr` as fold from the right.
@@ -605,11 +602,11 @@ append a (Array _ _ bTree bTail) =
 appendHelp : JsArray a -> Builder a -> Builder a
 appendHelp tail builder =
     let
-        merged =
-            JsArray.merge builder.tail tail branchFactor
+        appended =
+            JsArray.appendN branchFactor builder.tail tail
 
-        mergedLen =
-            JsArray.length merged
+        appendedLen =
+            JsArray.length appended
 
         tailLen =
             JsArray.length tail
@@ -617,13 +614,13 @@ appendHelp tail builder =
         leftOver =
             max 0 <| (JsArray.length builder.tail) + tailLen - branchFactor
     in
-        if mergedLen == branchFactor then
+        if appendedLen == branchFactor then
             { tail = JsArray.slice (tailLen - leftOver) tailLen tail
-            , nodeList = (Leaf merged) :: builder.nodeList
+            , nodeList = (Leaf appended) :: builder.nodeList
             , nodeListSize = builder.nodeListSize + 1
             }
         else
-            { tail = merged
+            { tail = appended
             , nodeList = builder.nodeList
             , nodeListSize = builder.nodeListSize
             }
@@ -762,16 +759,16 @@ sliceTree shift endIdx tree =
                     newSub =
                         sliceTree (shift - shiftStep) endIdx sub
                 in
-                    -- The sub is empty, slice it away
                     if JsArray.length newSub == 0 then
+                        -- The sub is empty, slice it away
                         JsArray.slice 0 lastPos tree
                     else
                         tree
                             |> JsArray.slice 0 (lastPos + 1)
                             |> JsArray.unsafeSet lastPos (SubTree newSub)
 
-            -- This is supposed to be the new tail. Fetched by fetchNewtail.
-            --Slice up to, but not including, this point.
+            -- This is supposed to be the new tail. Fetched by `fetchNewTail`.
+            -- Slice up to, but not including, this point.
             Leaf _ ->
                 JsArray.slice 0 lastPos tree
 
@@ -947,8 +944,8 @@ treeFromBuilder nodeList nodeListSize =
                 |> ceiling
     in
         if newNodeSize == 1 then
-            JsArray.listInitialize nodeList branchFactor
-                |> Tuple.second
+            JsArray.initializeFromList branchFactor nodeList
+                |> Tuple.first
         else
             treeFromBuilder
                 (compressNodes nodeList [])
@@ -961,15 +958,15 @@ nodes.
 compressNodes : List (Node a) -> List (Node a) -> List (Node a)
 compressNodes nodes acc =
     let
-        ( newNodes, jsArray ) =
-            JsArray.listInitialize nodes branchFactor
+        ( node, remainingNodes ) =
+            JsArray.initializeFromList branchFactor nodes
 
         newAcc =
-            (SubTree jsArray) :: acc
+            (SubTree node) :: acc
     in
-        case newNodes of
+        case remainingNodes of
             [] ->
                 List.reverse newAcc
 
             _ ->
-                compressNodes newNodes newAcc
+                compressNodes remainingNodes newAcc

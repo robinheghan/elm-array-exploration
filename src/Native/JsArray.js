@@ -11,14 +11,7 @@ function length(arr) {
 }
 
 function initialize(size, offset, f) {
-
-    // Optimize for common pattern of 32-sized arrays
-    var result;
-    if (size === 32) {
-        result = array32();
-    } else {
-        result = new Array(size);
-    }
+    var result = newArray(size);
 
     for (var i = 0; i < size; i++) {
         result[i] = f(offset + i);
@@ -27,54 +20,32 @@ function initialize(size, offset, f) {
     return result;
 }
 
-function array32() {
+function newArray(size) {
+    // A JS literal is much faster than `new Array(size)` in Safari.
+    // The following code optimizes the common case of 32-sized arrays,
+    // while falling back to the "proper" way to preallocate arrays
+    // for other sizes. This makes a big performance difference in
+    // Safari, while exerting a minor performance hit in Chrome.
+    // For 32-sized arrays, Chrome and Safari become equally fast.
+    if (size !== 32) {
+        return new Array(size);
+    }
+
     return [
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null
+        null, null, null, null, null,
+        null, null, null, null, null,
+        null, null, null, null, null,
+        null, null, null, null, null,
+        null, null, null, null, null,
+        null, null, null, null, null,
+        null, null
     ];
 }
 
-function listInitialize(ls, max) {
-    var result;
-    if (max === 32) {
-        result = array32();
-    } else {
-        result = new Array(max);
-    }
+function initializeFromList(max, ls) {
+    var result = newArray(max);
 
-    var i = 0;
-
-    for (; i < max; i++) {
+    for (var i = 0; i < max; i++) {
         if (ls.ctor === '[]') {
             result.length = i;
             break;
@@ -86,8 +57,8 @@ function listInitialize(ls, max) {
 
     return {
         ctor: '_Tuple2',
-        _0: ls,
-        _1: result
+        _0: result,
+        _1: ls
     };
 }
 
@@ -108,35 +79,29 @@ function push(val, arr) {
 }
 
 function foldl(f, init, arr) {
-    var a = init;
+    var acc = init;
     var len = arr.length;
 
     for (var i = 0; i < len; i++) {
-        a = A2(f, arr[i], a);
+        acc = A2(f, arr[i], acc);
     }
 
-    return a;
+    return acc;
 }
 
 function foldr(f, init, arr) {
-    var a = init;
+    var acc = init;
 
     for (var i = arr.length - 1; i >= 0; i--) {
-        a = A2(f, arr[i], a);
+        acc = A2(f, arr[i], acc);
     }
 
-    return a;
+    return acc;
 }
 
 function map(f, arr) {
     var len = arr.length;
-
-    var result;
-    if (len === 32) {
-        result = array32();
-    } else {
-        result = new Array(len);
-    }
+    var result = newArray(len);
 
     for (var i = 0; i < len; i++) {
         result[i] = f(arr[i]);
@@ -147,13 +112,7 @@ function map(f, arr) {
 
 function indexedMap(f, offset, arr) {
     var len = arr.length;
-
-    var result;
-    if (len === 32) {
-        result = array32();
-    } else {
-        result = new Array(len);
-    }
+    var result = newArray(len);
 
     for (var i = 0; i < len; i++) {
         result[i] = A2(f, offset + i, arr[i]);
@@ -166,22 +125,16 @@ function slice(from, to, arr) {
     return arr.slice(from, to);
 }
 
-function merge(dest, source, max) {
+function appendN(n, dest, source) {
     var destLen = dest.length;
-    var itemsToCopy = max - destLen;
+    var itemsToCopy = n - destLen;
 
     if (itemsToCopy > source.length) {
         itemsToCopy = source.length;
     }
 
     var size = destLen + itemsToCopy;
-
-    var result;
-    if (size === 32) {
-        result = array32();
-    } else {
-        result = new Array(size);
-    }
+    var result = newArray(size);
 
     for (var i = 0; i < destLen; i++) {
         result[i] = dest[i];
@@ -199,7 +152,7 @@ return {
     singleton: singleton,
     length: length,
     initialize: F3(initialize),
-    listInitialize: F2(listInitialize),
+    initializeFromList: F2(initializeFromList),
     unsafeGet: F2(unsafeGet),
     unsafeSet: F3(unsafeSet),
     push: F2(push),
@@ -208,7 +161,7 @@ return {
     map: F2(map),
     indexedMap: F3(indexedMap),
     slice: F3(slice),
-    merge: F3(merge)
+    appendN: F3(appendN)
 };
 
 }();
