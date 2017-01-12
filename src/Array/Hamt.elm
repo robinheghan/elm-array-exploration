@@ -90,7 +90,8 @@ factor.
 -}
 shiftStep : Int
 shiftStep =
-    logBase 2 (toFloat branchFactor) |> ceiling
+    logBase 2 (toFloat branchFactor)
+        |> ceiling
 
 
 {-| A mask which, when used in a bitwise and, reads the first `shiftStep` bits
@@ -372,13 +373,14 @@ push a (Array length startShift tree tail) =
                         newShift =
                             startShift + shiftStep
 
-                        spacyTree =
+                        newTree =
                             JsArray.singleton (SubTree tree)
+                                |> pushTailHelp newShift length modifiedTail
                     in
                         Array
                             newLen
                             newShift
-                            (pushTailHelp newShift length modifiedTail spacyTree)
+                            newTree
                             JsArray.empty
                 else
                     Array
