@@ -242,6 +242,12 @@ sliceTests =
                 \n size ->
                     slice 0 n (initialize size identity)
                         |> Expect.equal (initialize (size + n) identity)
+            , fuzz defaultSizeRange "slicing all but the last item" <|
+              \size ->
+                initialize size identity
+                  |> slice (size-1) size
+                  |> toList
+                  |> Expect.equal [size-1]
             , test "both small" <|
                 \() ->
                     toList (slice 2 5 smallSample)
