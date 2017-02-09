@@ -815,7 +815,7 @@ sliceLeft from ((Array length _ tree tail) as arr) =
         arr
     else if from >= tailIndex length then
         Array (length - from) shiftStep JsArray.empty <|
-            JsArray.slice from (JsArray.length tail) tail
+            JsArray.slice (from - tailIndex length) (JsArray.length tail) tail
     else
         let
             helper node acc =
