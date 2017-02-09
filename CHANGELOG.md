@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.0.2
+
+* Fixed bug where slicing everything but elements from the tail could return erronous result.
+* Made append faster, especially when appending a small array.
+* Made initialize faster.
+
 ## 2.0.1
 
 * Fixed bug where slice could return an `Array` which would have failed a `==` operation.
