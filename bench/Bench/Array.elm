@@ -115,6 +115,8 @@ createSuite n =
             get sampleArray
         , bench "Append" <|
             append sampleArray sampleArray
+        , bench "Small append" <|
+            append sampleArray (buildByInitialize 31 ())
         , bench "Slice from beginning minor" <|
             slice 3 n sampleArray
         , bench "Slice from beginning mayor" <|

@@ -352,18 +352,23 @@ setHelp shift idx val tree =
     push 3 (fromList [1,2]) == fromList [1,2,3]
 -}
 push : a -> Array a -> Array a
-push a (Array length startShift tree tail) =
-    let
-        modifiedTail =
-            JsArray.push a tail
+push a ((Array _ _ _ tail) as arr) =
+    alterTail (JsArray.push a tail) arr
 
+
+alterTail : JsArray a -> Array a -> Array a
+alterTail newTail (Array length startShift tree tail) =
+    let
         tailLen =
-            JsArray.length modifiedTail
+            JsArray.length tail
+
+        newTailLen =
+            JsArray.length newTail
 
         newLen =
-            length + 1
+            length + (newTailLen - tailLen)
     in
-        if tailLen == branchFactor then
+        if newTailLen == branchFactor then
             let
                 overflow =
                     Bitwise.shiftRightZfBy shiftStep newLen > Bitwise.shiftLeftBy startShift 1
@@ -375,7 +380,7 @@ push a (Array length startShift tree tail) =
 
                         newTree =
                             JsArray.singleton (SubTree tree)
-                                |> pushTailHelp newShift length modifiedTail
+                                |> pushTailHelp newShift length newTail
                     in
                         Array
                             newLen
@@ -386,14 +391,14 @@ push a (Array length startShift tree tail) =
                     Array
                         newLen
                         startShift
-                        (pushTailHelp startShift length modifiedTail tree)
+                        (pushTailHelp startShift length newTail tree)
                         JsArray.empty
         else
             Array
                 newLen
                 startShift
                 tree
-                modifiedTail
+                newTail
 
 
 pushTailHelp : Int -> Int -> JsArray a -> Tree a -> Tree a
@@ -583,22 +588,45 @@ indexedMap f ((Array length _ tree tail) as arr) =
     append (repeat 2 42) (repeat 3 81) == fromList [42,42,81,81,81]
 -}
 append : Array a -> Array a -> Array a
-append a (Array _ _ bTree bTail) =
-    let
-        builder =
-            builderFromArray a
+append ((Array _ _ _ aTail) as a) (Array bLen _ bTree bTail) =
+    if bLen < branchFactor then
+        let
+            appended =
+                JsArray.appendN branchFactor aTail bTail
 
-        foldHelper node builder =
-            case node of
-                SubTree tree ->
-                    JsArray.foldl foldHelper builder tree
+            bTailLen =
+                JsArray.length bTail
 
-                Leaf leaf ->
-                    appendHelp leaf builder
-    in
-        JsArray.foldl foldHelper builder bTree
-            |> appendHelp bTail
-            |> builderToArray
+            leftOver =
+                branchFactor - (JsArray.length aTail) - bTailLen
+
+            newArray =
+                alterTail appended a
+        in
+            if leftOver < 0 then
+                let
+                    nextTail =
+                        JsArray.slice leftOver bTailLen bTail
+                in
+                    alterTail nextTail newArray
+            else
+                newArray
+    else
+        let
+            builder =
+                builderFromArray a
+
+            foldHelper node builder =
+                case node of
+                    SubTree tree ->
+                        JsArray.foldl foldHelper builder tree
+
+                    Leaf leaf ->
+                        appendHelp leaf builder
+        in
+            JsArray.foldl foldHelper builder bTree
+                |> appendHelp bTail
+                |> builderToArray
 
 
 appendHelp : JsArray a -> Builder a -> Builder a
@@ -607,17 +635,19 @@ appendHelp tail builder =
         appended =
             JsArray.appendN branchFactor builder.tail tail
 
-        appendedLen =
-            JsArray.length appended
-
         tailLen =
             JsArray.length tail
 
         leftOver =
-            max 0 <| (JsArray.length builder.tail) + tailLen - branchFactor
+            branchFactor - (JsArray.length builder.tail) - tailLen
     in
-        if appendedLen == branchFactor then
-            { tail = JsArray.slice (tailLen - leftOver) tailLen tail
+        if leftOver < 0 then
+            { tail = JsArray.slice leftOver tailLen tail
+            , nodeList = (Leaf appended) :: builder.nodeList
+            , nodeListSize = builder.nodeListSize + 1
+            }
+        else if leftOver == 0 then
+            { tail = JsArray.empty
             , nodeList = (Leaf appended) :: builder.nodeList
             , nodeListSize = builder.nodeListSize + 1
             }

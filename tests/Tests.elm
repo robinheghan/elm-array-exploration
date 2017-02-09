@@ -206,8 +206,12 @@ transformTests =
                     |> Expect.equal (initialize (size + 1) identity)
         , fuzz (intRange 1 1050) "append" <|
             \size ->
-                append (initialize size identity) (initialize size (\idx -> idx + size))
+                append (initialize size identity) (initialize size ((+) size))
                     |> Expect.equal (initialize (size * 2) identity)
+        , fuzz2 defaultSizeRange (intRange 1 32) "small appends" <|
+            \s1 s2 ->
+                append (initialize s1 identity) (initialize s2 ((+) s1))
+                    |> Expect.equal (initialize (s1 + s2) identity)
         , fuzz (defaultSizeRange) "toString" <|
             \size ->
                 let
