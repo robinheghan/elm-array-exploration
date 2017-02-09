@@ -176,32 +176,38 @@ initialize length fn =
     if length <= 0 then
         empty
     else
-        initializeHelp 0 length length fn []
+        let
+            tailLen =
+                rem length branchFactor
+
+            tail =
+                JsArray.initialize tailLen (length - tailLen) fn
+
+            initialFromIndex =
+                length - tailLen - branchFactor
+        in
+            initializeHelp fn initialFromIndex length [] tail
 
 
-initializeHelp : Int -> Int -> Int -> (Int -> a) -> List (Node a) -> Array a
-initializeHelp fromIndex toIndex length fn nodeList =
-    let
-        nodeSize =
-            min branchFactor (toIndex - fromIndex)
-
-        node =
-            JsArray.initialize nodeSize fromIndex fn
-    in
-        -- Only the tail has a different size than `branchFactor`
-        if nodeSize < branchFactor then
-            builderToArray
-                { tail = node
-                , nodeList = nodeList
-                , nodeListSize = length // branchFactor
-                }
-        else
+initializeHelp : (Int -> a) -> Int -> Int -> List (Node a) -> JsArray a -> Array a
+initializeHelp fn fromIndex length nodeList tail =
+    if fromIndex < 0 then
+        builderToArray False
+            { tail = tail
+            , nodeList = nodeList
+            , nodeListSize = length // branchFactor
+            }
+    else
+        let
+            leaf =
+                Leaf <| JsArray.initialize branchFactor fromIndex fn
+        in
             initializeHelp
-                (fromIndex + nodeSize)
-                toIndex
-                length
                 fn
-                ((Leaf node) :: nodeList)
+                (fromIndex - 32)
+                length
+                (leaf :: nodeList)
+                tail
 
 
 {-| Creates an array with a given length, filled with a default element.
@@ -235,7 +241,7 @@ fromListHelp list nodeList nodeListSize =
             JsArray.initializeFromList branchFactor list
     in
         if JsArray.length jsArray < branchFactor then
-            builderToArray
+            builderToArray True
                 { tail = jsArray
                 , nodeList = nodeList
                 , nodeListSize = nodeListSize
@@ -580,7 +586,7 @@ indexedMap f ((Array length _ tree tail) as arr) =
             }
     in
         JsArray.foldl helper initialBuilder tree
-            |> builderToArray
+            |> builderToArray True
 
 
 {-| Append one array onto another one.
@@ -626,7 +632,7 @@ append ((Array _ _ _ aTail) as a) (Array bLen _ bTree bTail) =
         in
             JsArray.foldl foldHelper builder bTree
                 |> appendHelp bTail
-                |> builderToArray
+                |> builderToArray True
 
 
 appendHelp : JsArray a -> Builder a -> Builder a
@@ -885,7 +891,7 @@ sliceLeft from ((Array length _ tree tail) as arr) =
                             }
                     in
                         List.foldl appendHelp initialBuilder rest
-                            |> builderToArray
+                            |> builderToArray True
 
 
 {-| A builder contains all information necessary to build an array. Adding
@@ -934,8 +940,8 @@ builderFromArray (Array length _ tree tail) =
 
 {-| Construct an array with the information in a given builder.
 -}
-builderToArray : Builder a -> Array a
-builderToArray builder =
+builderToArray : Bool -> Builder a -> Array a
+builderToArray reverseNodeList builder =
     if builder.nodeListSize == 0 then
         Array
             (JsArray.length builder.tail)
@@ -953,10 +959,14 @@ builderToArray builder =
                     |> logBase (toFloat branchFactor)
                     |> floor
 
+            correctNodeList =
+                if reverseNodeList then
+                    List.reverse builder.nodeList
+                else
+                    builder.nodeList
+
             tree =
-                treeFromBuilder
-                    (List.reverse builder.nodeList)
-                    builder.nodeListSize
+                treeFromBuilder correctNodeList builder.nodeListSize
         in
             Array
                 (JsArray.length builder.tail + treeLen)
