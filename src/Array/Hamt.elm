@@ -204,7 +204,7 @@ initializeHelp fn fromIndex length nodeList tail =
         in
             initializeHelp
                 fn
-                (fromIndex - 32)
+                (fromIndex - branchFactor)
                 length
                 (leaf :: nodeList)
                 tail
@@ -359,25 +359,32 @@ setHelp shift idx val tree =
 -}
 push : a -> Array a -> Array a
 push a ((Array _ _ _ tail) as arr) =
-    alterTail (JsArray.push a tail) arr
+    unsafeReplaceTail (JsArray.push a tail) arr
 
 
-alterTail : JsArray a -> Array a -> Array a
-alterTail newTail (Array length startShift tree tail) =
+{-| Replaces the tail of an array. If the length of the tail equals the
+`branchFactor`, it is inserted into the tree, and the tail cleared.
+
+WARNING: For performance reasons, this function does not check if the new tail
+has a length equal to or beneath the `branchFactor`. Make sure this is the case
+before using this function.
+-}
+unsafeReplaceTail : JsArray a -> Array a -> Array a
+unsafeReplaceTail newTail (Array length startShift tree tail) =
     let
-        tailLen =
+        originalTailLen =
             JsArray.length tail
 
         newTailLen =
             JsArray.length newTail
 
-        newLen =
-            length + (newTailLen - tailLen)
+        newArrayLen =
+            length + (newTailLen - originalTailLen)
     in
         if newTailLen == branchFactor then
             let
                 overflow =
-                    Bitwise.shiftRightZfBy shiftStep newLen > Bitwise.shiftLeftBy startShift 1
+                    Bitwise.shiftRightZfBy shiftStep newArrayLen > Bitwise.shiftLeftBy startShift 1
             in
                 if overflow then
                     let
@@ -386,29 +393,29 @@ alterTail newTail (Array length startShift tree tail) =
 
                         newTree =
                             JsArray.singleton (SubTree tree)
-                                |> pushTailHelp newShift length newTail
+                                |> insertTailInTree newShift length newTail
                     in
                         Array
-                            newLen
+                            newArrayLen
                             newShift
                             newTree
                             JsArray.empty
                 else
                     Array
-                        newLen
+                        newArrayLen
                         startShift
-                        (pushTailHelp startShift length newTail tree)
+                        (insertTailInTree startShift length newTail tree)
                         JsArray.empty
         else
             Array
-                newLen
+                newArrayLen
                 startShift
                 tree
                 newTail
 
 
-pushTailHelp : Int -> Int -> JsArray a -> Tree a -> Tree a
-pushTailHelp shift idx tail tree =
+insertTailInTree : Int -> Int -> JsArray a -> Tree a -> Tree a
+insertTailInTree shift idx tail tree =
     let
         pos =
             Bitwise.and bitMask <| Bitwise.shiftRightZfBy shift idx
@@ -420,7 +427,7 @@ pushTailHelp shift idx tail tree =
                 let
                     newSub =
                         JsArray.empty
-                            |> pushTailHelp (shift - shiftStep) idx tail
+                            |> insertTailInTree (shift - shiftStep) idx tail
                             |> SubTree
                 in
                     JsArray.push newSub tree
@@ -434,7 +441,7 @@ pushTailHelp shift idx tail tree =
                         let
                             newSub =
                                 subTree
-                                    |> pushTailHelp (shift - shiftStep) idx tail
+                                    |> insertTailInTree (shift - shiftStep) idx tail
                                     |> SubTree
                         in
                             JsArray.unsafeSet pos newSub tree
@@ -443,7 +450,7 @@ pushTailHelp shift idx tail tree =
                         let
                             newSub =
                                 JsArray.singleton val
-                                    |> pushTailHelp (shift - shiftStep) idx tail
+                                    |> insertTailInTree (shift - shiftStep) idx tail
                                     |> SubTree
                         in
                             JsArray.unsafeSet pos newSub tree
@@ -589,7 +596,7 @@ indexedMap f ((Array length _ tree tail) as arr) =
             |> builderToArray True
 
 
-{-| Append one array onto another one.
+{-| Append two arrays to a new one.
 
     append (repeat 2 42) (repeat 3 81) == fromList [42,42,81,81,81]
 -}
@@ -603,18 +610,18 @@ append ((Array _ _ _ aTail) as a) (Array bLen _ bTree bTail) =
             bTailLen =
                 JsArray.length bTail
 
-            leftOver =
+            notAppended =
                 branchFactor - (JsArray.length aTail) - bTailLen
 
             newArray =
-                alterTail appended a
+                unsafeReplaceTail appended a
         in
-            if leftOver < 0 then
+            if notAppended < 0 then
                 let
                     nextTail =
-                        JsArray.slice leftOver bTailLen bTail
+                        JsArray.slice notAppended bTailLen bTail
                 in
-                    alterTail nextTail newArray
+                    unsafeReplaceTail nextTail newArray
             else
                 newArray
     else
@@ -644,15 +651,15 @@ appendHelp tail builder =
         tailLen =
             JsArray.length tail
 
-        leftOver =
+        notAppended =
             branchFactor - (JsArray.length builder.tail) - tailLen
     in
-        if leftOver < 0 then
-            { tail = JsArray.slice leftOver tailLen tail
+        if notAppended < 0 then
+            { tail = JsArray.slice notAppended tailLen tail
             , nodeList = (Leaf appended) :: builder.nodeList
             , nodeListSize = builder.nodeListSize + 1
             }
-        else if leftOver == 0 then
+        else if notAppended == 0 then
             { tail = JsArray.empty
             , nodeList = (Leaf appended) :: builder.nodeList
             , nodeListSize = builder.nodeListSize + 1
@@ -812,7 +819,7 @@ sliceTree shift endIdx tree =
 
 
 {-| The tree is supposed to be of a certain depth. Since slicing removes
-elements from the tree, it could be that the tree should have a smaller depth
+elements, it could be that the tree should have a smaller depth
 than it had originally. This function shortens the height if it is necessary
 to do so.
 -}
@@ -839,7 +846,7 @@ First, two things are tested:
 set the tree to the empty array.
 
 Otherwise, we do the following:
-1. Add every leaf node in the three to a list.
+1. Add every leaf node in the tree to a list.
 2. Drop the nodes which are supposed to be sliced away.
 3. Slice the head node of the list, which represents the start of the new array.
 4. Create a builder with the tail set as the node from the previous step.
@@ -897,10 +904,6 @@ sliceLeft from ((Array length _ tree tail) as arr) =
 {-| A builder contains all information necessary to build an array. Adding
 information to the builder is fast. A builder is therefore a suitable
 intermediary for constructing arrays.
-
-Due to the nature of lists, we expect `nodeList` to be in reverse order. That
-is, the first `Node` in the tree of an `Array`, should be last in the
-`nodeList`.
 -}
 type alias Builder a =
     { tail : JsArray a
@@ -939,6 +942,11 @@ builderFromArray (Array length _ tree tail) =
 
 
 {-| Construct an array with the information in a given builder.
+
+Due to the nature of `List` the list of nodes in a builder will often
+be in reverse order (that is, the first leaf of the array is the last
+node in the node list). This function therefore allows the caller to
+specify if the node list should be reversed before building the array.
 -}
 builderToArray : Bool -> Builder a -> Array a
 builderToArray reverseNodeList builder =
