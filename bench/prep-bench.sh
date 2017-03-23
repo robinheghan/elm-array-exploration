@@ -2,4 +2,4 @@
 
 set -e
 
-elm-make --yes --output bench.js Bencher.elm
+elm-make --yes --output index.html Main.elm
