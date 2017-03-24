@@ -604,26 +604,16 @@ append : Array a -> Array a -> Array a
 append ((Array _ _ _ aTail) as a) (Array bLen _ bTree bTail) =
     if bLen < branchFactor then
         let
-            appended =
-                JsArray.appendN branchFactor aTail bTail
+            foldHelper node arr =
+                case node of
+                    SubTree tree ->
+                        JsArray.foldl foldHelper arr tree
 
-            bTailLen =
-                JsArray.length bTail
-
-            notAppended =
-                branchFactor - (JsArray.length aTail) - bTailLen
-
-            newArray =
-                unsafeReplaceTail appended a
+                    Leaf leaf ->
+                        appendHelpTree leaf arr
         in
-            if notAppended < 0 then
-                let
-                    nextTail =
-                        JsArray.slice notAppended bTailLen bTail
-                in
-                    unsafeReplaceTail nextTail newArray
-            else
-                newArray
+            JsArray.foldl foldHelper a bTree
+                |> appendHelpTree bTail
     else
         let
             builder =
@@ -635,15 +625,40 @@ append ((Array _ _ _ aTail) as a) (Array bLen _ bTree bTail) =
                         JsArray.foldl foldHelper builder tree
 
                     Leaf leaf ->
-                        appendHelp leaf builder
+                        appendHelpBuilder leaf builder
         in
             JsArray.foldl foldHelper builder bTree
-                |> appendHelp bTail
+                |> appendHelpBuilder bTail
                 |> builderToArray True
 
 
-appendHelp : JsArray a -> Builder a -> Builder a
-appendHelp tail builder =
+appendHelpTree : JsArray a -> Array a -> Array a
+appendHelpTree toAppend ((Array length shiftStep tree tail) as arr) =
+    let
+        appended =
+            JsArray.appendN branchFactor tail toAppend
+
+        itemsToAppend =
+            JsArray.length toAppend
+
+        notAppended =
+            branchFactor - (JsArray.length tail) - itemsToAppend
+
+        newArray =
+            unsafeReplaceTail appended arr
+    in
+        if notAppended < 0 then
+            let
+                nextTail =
+                    JsArray.slice notAppended itemsToAppend toAppend
+            in
+                unsafeReplaceTail nextTail newArray
+        else
+            newArray
+
+
+appendHelpBuilder : JsArray a -> Builder a -> Builder a
+appendHelpBuilder tail builder =
     let
         appended =
             JsArray.appendN branchFactor builder.tail tail
@@ -897,7 +912,7 @@ sliceLeft from ((Array length _ tree tail) as arr) =
                             , nodeListSize = 0
                             }
                     in
-                        List.foldl appendHelp initialBuilder rest
+                        List.foldl appendHelpBuilder initialBuilder rest
                             |> builderToArray True
 
 
