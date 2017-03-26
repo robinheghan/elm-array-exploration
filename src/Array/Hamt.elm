@@ -602,7 +602,8 @@ indexedMap f ((Array length _ tree tail) as arr) =
 -}
 append : Array a -> Array a -> Array a
 append ((Array _ _ _ aTail) as a) (Array bLen _ bTree bTail) =
-    if bLen < branchFactor then
+    -- The magic number 4 has been found with benchmarks
+    if bLen <= (branchFactor * 4) then
         let
             foldHelper node arr =
                 case node of
