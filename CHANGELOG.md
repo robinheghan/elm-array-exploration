@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.0.3
+
+* Optimized append when appending a small array.
+
 ## 2.0.2
 
 * Fixed bug where slicing everything but elements from the tail could return erronous result.
