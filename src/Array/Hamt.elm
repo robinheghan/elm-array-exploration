@@ -24,26 +24,41 @@ module Array.Hamt
 
 {-| Fast immutable arrays. The elements in an array must have the same type.
 
+
 # Arrays
+
 @docs Array
 
+
 # Creation
+
 @docs empty, initialize, repeat, fromList
 
+
 # Query
+
 @docs isEmpty, length, get
 
+
 # Manipulate
+
 @docs set, push, append, slice
 
+
 # Lists
+
 @docs toList, toIndexedList
 
+
 # Transform
+
 @docs foldl, foldr, filter, map, indexedMap
 
+
 # Display
+
 @docs toString
+
 -}
 
 import Bitwise
@@ -64,6 +79,7 @@ tree, and we do this by dividing it into several smaller numbers (see
 `shiftStep` documentation). By dividing the index into smaller numbers, we
 will always get a range which is a power of two (2 bits gives 0-3, 3 gives
 0-7, 4 gives 0-15...).
+
 -}
 branchFactor : Int
 branchFactor =
@@ -87,6 +103,7 @@ read which of the 32 branches to take.
 
 The `shiftStep` specifices how many bits are required to represent the branching
 factor.
+
 -}
 shiftStep : Int
 shiftStep =
@@ -136,6 +153,7 @@ type alias Tree a =
 {-| Return an empty array.
 
     length empty == 0
+
 -}
 empty : Array a
 empty =
@@ -149,6 +167,7 @@ empty =
 {-| Determine if an array is empty.
 
     isEmpty empty == True
+
 -}
 isEmpty : Array a -> Bool
 isEmpty (Array length _ _ _) =
@@ -158,6 +177,7 @@ isEmpty (Array length _ _ _) =
 {-| Return the length of an array.
 
     length (fromList [1,2,3]) == 3
+
 -}
 length : Array a -> Int
 length (Array length _ _ _) =
@@ -170,6 +190,7 @@ the element at index `i` initialized to the result of `(f i)`.
     initialize 4 identity    == fromList [0,1,2,3]
     initialize 4 (\n -> n*n) == fromList [0,1,4,9]
     initialize 4 (always 0)  == fromList [0,0,0,0]
+
 -}
 initialize : Int -> (Int -> a) -> Array a
 initialize length fn =
@@ -216,6 +237,7 @@ initializeHelp fn fromIndex length nodeList tail =
     repeat 3 "cat" == fromList ["cat","cat","cat"]
 
 Notice that `repeat 3 x` is the same as `initialize 3 (always x)`.
+
 -}
 repeat : Int -> a -> Array a
 repeat n e =
@@ -256,6 +278,7 @@ fromListHelp list nodeList nodeListSize =
 {-| Return the array represented as a string.
 
     (toString <| Array.fromList [1,2,3]) == "Array [1,2,3]"
+
 -}
 toString : Array a -> String
 toString array =
@@ -276,6 +299,7 @@ range.
     get  2 (fromList [0,1,2]) == Just 2
     get  5 (fromList [0,1,2]) == Nothing
     get -1 (fromList [0,1,2]) == Nothing
+
 -}
 get : Int -> Array a -> Maybe a
 get idx (Array length startShift tree tail) =
@@ -315,6 +339,7 @@ tailIndex len =
 If the index is out of range, the array is unaltered.
 
     set 1 7 (fromList [1,2,3]) == fromList [1,7,3]
+
 -}
 set : Int -> a -> Array a -> Array a
 set idx val ((Array length startShift tree tail) as arr) =
@@ -356,6 +381,7 @@ setHelp shift idx val tree =
 {-| Push an element onto the end of an array.
 
     push 3 (fromList [1,2]) == fromList [1,2,3]
+
 -}
 push : a -> Array a -> Array a
 push a ((Array _ _ _ tail) as arr) =
@@ -368,6 +394,7 @@ push a ((Array _ _ _ tail) as arr) =
 WARNING: For performance reasons, this function does not check if the new tail
 has a length equal to or beneath the `branchFactor`. Make sure this is the case
 before using this function.
+
 -}
 unsafeReplaceTail : JsArray a -> Array a -> Array a
 unsafeReplaceTail newTail (Array length startShift tree tail) =
@@ -459,6 +486,7 @@ insertTailInTree shift idx tail tree =
 {-| Create a list of elements from an array.
 
     toList (fromList [3,5,8]) == [3,5,8]
+
 -}
 toList : Array a -> List a
 toList arr =
@@ -469,6 +497,7 @@ toList arr =
 paired with its index.
 
     toIndexedList (fromList ["cat","dog"]) == [(0,"cat"), (1,"dog")]
+
 -}
 toIndexedList : Array a -> List ( Int, a )
 toIndexedList ((Array length _ _ _) as arr) =
@@ -483,6 +512,7 @@ toIndexedList ((Array length _ _ _) as arr) =
 {-| Reduce an array from the right. Read `foldr` as fold from the right.
 
     foldr (+) 0 (repeat 3 5) == 15
+
 -}
 foldr : (a -> b -> b) -> b -> Array a -> b
 foldr f init (Array _ _ tree tail) =
@@ -504,6 +534,7 @@ foldr f init (Array _ _ tree tail) =
 {-| Reduce an array from the left. Read `foldl` as fold from the left.
 
     foldl (::) [] (fromList [1,2,3]) == [3,2,1]
+
 -}
 foldl : (a -> b -> b) -> b -> Array a -> b
 foldl f init (Array _ _ tree tail) =
@@ -525,6 +556,7 @@ foldl f init (Array _ _ tree tail) =
 {-| Keep only elements that satisfy the predicate.
 
     filter isEven (fromList [1,2,3]) == (fromList [2])
+
 -}
 filter : (a -> Bool) -> Array a -> Array a
 filter f arr =
@@ -542,6 +574,7 @@ filter f arr =
 {-| Apply a function on every element in an array.
 
     map sqrt (fromList [1,4,9]) == fromList [1,2,3]
+
 -}
 map : (a -> b) -> Array a -> Array b
 map f (Array length startShift tree tail) =
@@ -564,6 +597,7 @@ map f (Array length startShift tree tail) =
 {-| Apply a function on every element with its index as first argument.
 
     indexedMap (*) (fromList [5,5,5]) == fromList [0,5,10]
+
 -}
 indexedMap : (Int -> a -> b) -> Array a -> Array b
 indexedMap f ((Array length _ tree tail) as arr) =
@@ -599,6 +633,7 @@ indexedMap f ((Array length _ tree tail) as arr) =
 {-| Append two arrays to a new one.
 
     append (repeat 2 42) (repeat 3 81) == fromList [42,42,81,81,81]
+
 -}
 append : Array a -> Array a -> Array a
 append ((Array _ _ _ aTail) as a) (Array bLen _ bTree bTail) =
@@ -703,6 +738,7 @@ the end of the array.
 
 This makes it pretty easy to `pop` the last element off of an array:
 `slice 0 -1 array`
+
 -}
 slice : Int -> Int -> Array a -> Array a
 slice from to arr =
@@ -726,6 +762,7 @@ slice from to arr =
     translateIndex -1 someArray == someArray.length - 1
     translateIndex -10 someArray == someArray.length - 10
     translateIndex 5 someArray == 5
+
 -}
 translateIndex : Int -> Array a -> Int
 translateIndex idx (Array length _ _ _) =
@@ -747,14 +784,17 @@ translateIndex idx (Array length _ _ _) =
 {-| This function slices the tree from the right.
 
 First, two things are tested:
-1. If the array does not need slicing, return the original array.
-2. If the array can be sliced by only slicing the tail, slice the tail.
+
+1.  If the array does not need slicing, return the original array.
+2.  If the array can be sliced by only slicing the tail, slice the tail.
 
 Otherwise, we do the following:
-1. Find the new tail in the tree, promote it to the root tail position and
-slice it.
-2. Slice every sub tree.
-3. Promote subTrees until the tree has the correct height.
+
+1.  Find the new tail in the tree, promote it to the root tail position and
+    slice it.
+2.  Slice every sub tree.
+3.  Promote subTrees until the tree has the correct height.
+
 -}
 sliceRight : Int -> Array a -> Array a
 sliceRight end ((Array length startShift tree tail) as arr) =
@@ -858,16 +898,19 @@ the index of every element after the slice. Which means that we will have to
 rebuild the array.
 
 First, two things are tested:
-1. If the array does not need slicing, return the original array.
-2. If the slice removes every element but those in the tail, slice the tail and
-set the tree to the empty array.
+
+1.  If the array does not need slicing, return the original array.
+2.  If the slice removes every element but those in the tail, slice the tail and
+    set the tree to the empty array.
 
 Otherwise, we do the following:
-1. Add every leaf node in the tree to a list.
-2. Drop the nodes which are supposed to be sliced away.
-3. Slice the head node of the list, which represents the start of the new array.
-4. Create a builder with the tail set as the node from the previous step.
-5. Append the remaining nodes into this builder, and create the array.
+
+1.  Add every leaf node in the tree to a list.
+2.  Drop the nodes which are supposed to be sliced away.
+3.  Slice the head node of the list, which represents the start of the new array.
+4.  Create a builder with the tail set as the node from the previous step.
+5.  Append the remaining nodes into this builder, and create the array.
+
 -}
 sliceLeft : Int -> Array a -> Array a
 sliceLeft from ((Array length _ tree tail) as arr) =
@@ -964,6 +1007,7 @@ Due to the nature of `List` the list of nodes in a builder will often
 be in reverse order (that is, the first leaf of the array is the last
 node in the node list). This function therefore allows the caller to
 specify if the node list should be reversed before building the array.
+
 -}
 builderToArray : Bool -> Builder a -> Array a
 builderToArray reverseNodeList builder =

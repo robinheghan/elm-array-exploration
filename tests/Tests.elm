@@ -20,7 +20,9 @@ all =
         ]
 
 
-{-| > 33000 elements requires 3 levels in the tree
+{-|
+
+> 33000 elements requires 3 levels in the tree
 -}
 defaultSizeRange : Fuzzer Int
 defaultSizeRange =
