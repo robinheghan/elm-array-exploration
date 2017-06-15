@@ -11,39 +11,17 @@ function length(arr) {
 }
 
 function initialize(size, offset, f) {
-    var result = newArray(size);
+    var result = new Array(size);
 
-    for (var i = 0; i < size; i++) {
-        result[i] = f(offset + i);
+    while (size--) {
+        result[size] = f(offset + size);
     }
 
     return result;
 }
 
-function newArray(size) {
-    // A JS literal is much faster than `new Array(size)` in Safari.
-    // The following code optimizes the common case of 32-sized arrays,
-    // while falling back to the "proper" way to preallocate arrays
-    // for other sizes. This makes a big performance difference in
-    // Safari, while exerting a minor performance hit in Chrome.
-    // For 32-sized arrays, Chrome and Safari become equally fast.
-    if (size !== 32) {
-        return new Array(size);
-    }
-
-    return [
-        null, null, null, null, null,
-        null, null, null, null, null,
-        null, null, null, null, null,
-        null, null, null, null, null,
-        null, null, null, null, null,
-        null, null, null, null, null,
-        null, null
-    ];
-}
-
 function initializeFromList(max, ls) {
-    var result = newArray(max);
+    var result = new Array(max);
 
     for (var i = 0; i < max; i++) {
         if (ls.ctor === '[]') {
@@ -67,19 +45,30 @@ function unsafeGet(idx, arr) {
 }
 
 function unsafeSet(idx, val, arr) {
-    var result = arr.slice();
+    var length = arr.length;
+    var result = new Array(length);
+
+    while (length--) {
+        result[length] = arr[length];
+    }
+
     result[idx] = val;
     return result;
 }
 
 function push(val, arr) {
-    var result = arr.slice();
-    result.push(val);
+    var length = arr.length;
+    var result = new Array(length + 1);
+    result[length] = val;
+
+    while (length--) {
+        result[length] = arr[length];
+    }
+
     return result;
 }
 
-function foldl(f, init, arr) {
-    var acc = init;
+function foldl(f, acc, arr) {
     var len = arr.length;
 
     for (var i = 0; i < len; i++) {
@@ -89,33 +78,33 @@ function foldl(f, init, arr) {
     return acc;
 }
 
-function foldr(f, init, arr) {
-    var acc = init;
+function foldr(f, acc, arr) {
+    var length = arr.length;
 
-    for (var i = arr.length - 1; i >= 0; i--) {
-        acc = A2(f, arr[i], acc);
+    while (length--) {
+        acc = A2(f, arr[length], acc);
     }
 
     return acc;
 }
 
 function map(f, arr) {
-    var len = arr.length;
-    var result = newArray(len);
+    var length = arr.length;
+    var result = new Array(length);
 
-    for (var i = 0; i < len; i++) {
-        result[i] = f(arr[i]);
+    while (length--) {
+        result[length] = f(arr[length]);
     }
 
     return result;
 }
 
 function indexedMap(f, offset, arr) {
-    var len = arr.length;
-    var result = newArray(len);
+    var length = arr.length;
+    var result = new Array(length);
 
-    for (var i = 0; i < len; i++) {
-        result[i] = A2(f, offset + i, arr[i]);
+    while (length--) {
+        result[length] = A2(f, offset + length, arr[length]);
     }
 
     return result;
@@ -134,7 +123,7 @@ function appendN(n, dest, source) {
     }
 
     var size = destLen + itemsToCopy;
-    var result = newArray(size);
+    var result = new Array(size);
 
     for (var i = 0; i < destLen; i++) {
         result[i] = dest[i];
