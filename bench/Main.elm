@@ -60,12 +60,6 @@ suite n =
             , Benchmark.compare "slice (end, big)"
                 (benchmark3 "Array" Array.slice 0 (n // 2) sampleArray)
                 (benchmark3 "HAMT" Hamt.slice 0 (n // 2) sampleHamt)
-            , Benchmark.compare "slice (both, small)"
-                (benchmark3 "Array" Array.slice 3 -3 sampleArray)
-                (benchmark3 "HAMT" Hamt.slice 3 -3 sampleHamt)
-            , Benchmark.compare "slice (both, big)"
-                (benchmark3 "Array" Array.slice ((n // 2) - 10) (n // 2) sampleArray)
-                (benchmark3 "HAMT" Hamt.slice ((n // 2) - 10) (n // 2) sampleHamt)
             , Benchmark.compare "foldl"
                 (benchmark3 "Array" Array.foldl countFn 0 sampleArray)
                 (benchmark3 "HAMT" Hamt.foldl countFn 0 sampleHamt)
@@ -90,9 +84,6 @@ suite n =
             , Benchmark.compare "indexedList"
                 (benchmark1 "Array" Array.toIndexedList sampleArray)
                 (benchmark1 "HAMT" Hamt.toIndexedList sampleHamt)
-            , Benchmark.compare "toString"
-                (benchmark1 "Array" toString sampleArray)
-                (benchmark1 "HAMT" Hamt.toString sampleHamt)
             , Benchmark.compare "= (equal, best case)"
                 (benchmark2 "Array" (==) sampleArray (Array.set 5 5 sampleArray))
                 (benchmark2 "HAMT" (==) sampleHamt (Hamt.set 5 5 sampleHamt))
