@@ -23,15 +23,12 @@ function initialize(size, offset, f) {
 function initializeFromList(max, ls) {
     var result = new Array(max);
 
-    for (var i = 0; i < max; i++) {
-        if (ls.ctor === '[]') {
-            result.length = i;
-            break;
-        }
-
+    for (var i = 0; i < max && ls.ctor !== '[]'; i++) {
         result[i] = ls._0;
         ls = ls._1;
     }
+
+    result.length = i;
 
     return {
         ctor: '_Tuple2',
