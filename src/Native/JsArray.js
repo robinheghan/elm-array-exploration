@@ -13,8 +13,8 @@ function length(arr) {
 function initialize(size, offset, f) {
     var result = new Array(size);
 
-    while (size--) {
-        result[size] = f(offset + size);
+    for (var i = 0; i < size; i++) {
+        result[i] = f(offset + i);
     }
 
     return result;
@@ -48,8 +48,8 @@ function unsafeSet(idx, val, arr) {
     var length = arr.length;
     var result = new Array(length);
 
-    while (length--) {
-        result[length] = arr[length];
+    for (var i = 0; i < length; i++) {
+        result[i] = arr[i];
     }
 
     result[idx] = val;
@@ -59,19 +59,19 @@ function unsafeSet(idx, val, arr) {
 function push(val, arr) {
     var length = arr.length;
     var result = new Array(length + 1);
-    result[length] = val;
 
-    while (length--) {
-        result[length] = arr[length];
+    for (var i = 0; i < length; i++) {
+        result[i] = arr[i];
     }
 
+    result[length] = val;
     return result;
 }
 
 function foldl(f, acc, arr) {
-    var len = arr.length;
+    var length = arr.length;
 
-    for (var i = 0; i < len; i++) {
+    for (var i = 0; i < length; i++) {
         acc = A2(f, arr[i], acc);
     }
 
@@ -79,10 +79,8 @@ function foldl(f, acc, arr) {
 }
 
 function foldr(f, acc, arr) {
-    var length = arr.length;
-
-    while (length--) {
-        acc = A2(f, arr[length], acc);
+    for (var i = arr.length - 1; i >= 0; i--) {
+        acc = A2(f, arr[i], acc);
     }
 
     return acc;
@@ -92,8 +90,8 @@ function map(f, arr) {
     var length = arr.length;
     var result = new Array(length);
 
-    while (length--) {
-        result[length] = f(arr[length]);
+    for (var i = 0; i < length; i++) {
+        result[i] = f(arr[i]);
     }
 
     return result;
@@ -103,8 +101,8 @@ function indexedMap(f, offset, arr) {
     var length = arr.length;
     var result = new Array(length);
 
-    while (length--) {
-        result[length] = A2(f, offset + length, arr[length]);
+    for (var i = 0; i < length; i++) {
+        result[i] = A2(f, offset + i, arr[i]);
     }
 
     return result;
