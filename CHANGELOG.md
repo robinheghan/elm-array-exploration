@@ -1,5 +1,9 @@
 # ChangeLog
 
+## 2.0.5
+
+* Performance improvements.
+
 ## 2.0.4
 
 * Fixed runtime exception when slicing a large array to a small (< 32 elements) one.
