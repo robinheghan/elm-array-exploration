@@ -75,6 +75,17 @@ function foldl(f, acc, arr) {
     return acc;
 }
 
+    function stoppableFoldl(f, init, arr) {
+	var length = arr.length;
+        var acc = { ctor: 'Continue', _0: init };
+
+	for (var i = 0; i < length && acc.ctor !== 'Done'; i++) {
+            acc = A2(f, arr[i], acc._0);
+	}
+
+	return acc;
+    }
+
 function foldr(f, acc, arr) {
     for (var i = arr.length - 1; i >= 0; i--) {
         acc = A2(f, arr[i], acc);
@@ -141,6 +152,7 @@ return {
     unsafeSet: F3(unsafeSet),
     push: F2(push),
     foldl: F3(foldl),
+    stoppableFoldl: F3(stoppableFoldl),
     foldr: F3(foldr),
     map: F2(map),
     indexedMap: F3(indexedMap),

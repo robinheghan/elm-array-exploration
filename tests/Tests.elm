@@ -1,23 +1,10 @@
-module Tests exposing (all)
+module Tests exposing (..)
 
-import Test exposing (Test, describe, test, fuzz, fuzz2)
+import Test exposing (..)
 import Fuzz exposing (Fuzzer, intRange)
 import Expect
+import Array.JsArray exposing (Stopper(..))
 import Array.Hamt as Array exposing (..)
-
-
-all : Test
-all =
-    describe "Array"
-        [ initTests
-        , isEmptyTests
-        , lengthTests
-        , getSetTests
-        , conversionTests
-        , transformTests
-        , sliceTests
-        , runtimeCrashTests
-        ]
 
 
 {-|
@@ -186,13 +173,27 @@ transformTests =
             \size ->
                 foldl (::) [] (initialize size identity)
                     |> Expect.equal (List.reverse (List.range 0 (size - 1)))
+        , fuzz defaultSizeRange "stoppableFoldl" <|
+            \size ->
+                (stoppableFoldl
+                    (\item acc ->
+                        if Array.length acc == 3 then
+                            Done acc
+                        else
+                            Continue <| Array.push item acc
+                    )
+                    Array.empty
+                    (initialize size identity)
+                )
+                    |> Array.length
+                    |> Expect.equal (min 3 size)
         , fuzz defaultSizeRange "foldr" <|
             \size ->
                 foldr (\n acc -> n :: acc) [] (initialize size identity)
                     |> Expect.equal (List.range 0 (size - 1))
         , fuzz defaultSizeRange "filter" <|
             \size ->
-                toList (filter (\a -> a % 2 == 0) (initialize size identity))
+                toList (Array.filter (\a -> a % 2 == 0) (initialize size identity))
                     |> Expect.equal (List.filter (\a -> a % 2 == 0) (List.range 0 (size - 1)))
         , fuzz defaultSizeRange "map" <|
             \size ->

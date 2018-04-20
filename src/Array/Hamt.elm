@@ -14,6 +14,7 @@ module Array.Hamt
         , toIndexedList
         , foldr
         , foldl
+        , stoppableFoldl
         , filter
         , map
         , indexedMap
@@ -52,7 +53,7 @@ module Array.Hamt
 
 # Transform
 
-@docs foldl, foldr, filter, map, indexedMap
+@docs foldl, stoppableFoldl, foldr, filter, map, indexedMap
 
 
 # Display
@@ -551,6 +552,39 @@ foldl f init (Array _ _ tree tail) =
             JsArray.foldl helper init tree
     in
         JsArray.foldl f acc tail
+
+
+{-| Reduce an array from the left. Read `foldl` as fold from the left.
+
+    foldl (::) [] (fromList [1,2,3]) == [3,2,1]
+
+-}
+stoppableFoldl : (a -> b -> JsArray.Stopper b) -> b -> Array a -> b
+stoppableFoldl f init (Array _ _ tree tail) =
+    let
+        helper : Node a -> b -> JsArray.Stopper b
+        helper i acc =
+            case i of
+                SubTree subTree ->
+                    JsArray.stoppableFoldl helper acc subTree
+
+                Leaf values ->
+                    JsArray.stoppableFoldl f acc values
+
+        acc =
+            JsArray.stoppableFoldl helper init tree
+    in
+        case acc of
+            JsArray.Done result ->
+                result
+
+            JsArray.Continue treePass ->
+                case JsArray.stoppableFoldl f treePass tail of
+                    JsArray.Done result ->
+                        result
+
+                    JsArray.Continue result ->
+                        result
 
 
 {-| Keep only elements that satisfy the predicate.

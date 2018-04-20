@@ -1,0 +1,9 @@
+{
+    "scripts": {
+        "test": "elm-test --fuzz=1000"
+    },
+    "devDependencies": {
+        "elm-test": "^0.18.7"
+    },
+    "dependencies": {}
+}
