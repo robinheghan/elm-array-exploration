@@ -1,96 +1,140 @@
 module Main exposing (main)
 
 import Benchmark.Runner exposing (BenchmarkProgram, program)
-import Benchmark exposing (Benchmark, describe, benchmark1, benchmark2, benchmark3)
-import Array.Hamt as Hamt
-import Array
+import Benchmark exposing (Benchmark)
+import Array.Hamt as Array exposing (Array)
+import Array.JsArray as JsArray
 
 
 main : BenchmarkProgram
 main =
-    program <| suite 10000
+    program <| suite 100
 
 
 suite : Int -> Benchmark
 suite n =
     let
-        sampleHamt =
-            Hamt.initialize n identity
+        ( ls, arr ) =
+            properSetup n ( [], Array.empty )
 
-        sampleArray =
-            Array.initialize n identity
-
-        sampleList =
-            List.range 1 n
-
-        countFn acc _ =
-            acc + 1
-
-        isEven n =
-            n % 2 == 0
+        pred =
+            findPredicate n
     in
-        describe ("Array (" ++ toString n ++ " elements)")
-            [ Benchmark.compare "initialize"
-                (benchmark2 "Array" Array.initialize n identity)
-                (benchmark2 "HAMT" Hamt.initialize n identity)
-            , Benchmark.compare "get"
-                (benchmark2 "Array" Array.get 5 sampleArray)
-                (benchmark2 "HAMT" Hamt.get 5 sampleHamt)
-            , Benchmark.compare "set"
-                (benchmark3 "Array" Array.set 7 5 sampleArray)
-                (benchmark3 "HAMT" Hamt.set 7 5 sampleHamt)
-            , Benchmark.compare "push"
-                (benchmark2 "Array" Array.push 5 sampleArray)
-                (benchmark2 "HAMT" Hamt.push 5 sampleHamt)
-            , Benchmark.compare "append"
-                (benchmark2 "Array" Array.append sampleArray sampleArray)
-                (benchmark2 "HAMT" Hamt.append sampleHamt sampleHamt)
-            , Benchmark.compare "append (small)"
-                (benchmark2 "Array" Array.append sampleArray (Array.initialize 31 identity))
-                (benchmark2 "HAMT" Hamt.append sampleHamt (Hamt.initialize 31 identity))
-            , Benchmark.compare "slice (beginning, small)"
-                (benchmark3 "Array" Array.slice 3 n sampleArray)
-                (benchmark3 "HAMT" Hamt.slice 3 n sampleHamt)
-            , Benchmark.compare "slice (beginning, big)"
-                (benchmark3 "Array" Array.slice (n // 2) n sampleArray)
-                (benchmark3 "HAMT" Hamt.slice (n // 2) n sampleHamt)
-            , Benchmark.compare "slice (end, small)"
-                (benchmark3 "Array" Array.slice 0 -3 sampleArray)
-                (benchmark3 "HAMT" Hamt.slice 0 -3 sampleHamt)
-            , Benchmark.compare "slice (end, big)"
-                (benchmark3 "Array" Array.slice 0 (n // 2) sampleArray)
-                (benchmark3 "HAMT" Hamt.slice 0 (n // 2) sampleHamt)
-            , Benchmark.compare "foldl"
-                (benchmark3 "Array" Array.foldl countFn 0 sampleArray)
-                (benchmark3 "HAMT" Hamt.foldl countFn 0 sampleHamt)
-            , Benchmark.compare "foldr"
-                (benchmark3 "Array" Array.foldr countFn 0 sampleArray)
-                (benchmark3 "HAMT" Hamt.foldr countFn 0 sampleHamt)
-            , Benchmark.compare "filter"
-                (benchmark2 "Array" Array.filter isEven sampleArray)
-                (benchmark2 "HAMT" Hamt.filter isEven sampleHamt)
-            , Benchmark.compare "map"
-                (benchmark2 "Array" Array.map identity sampleArray)
-                (benchmark2 "HAMT" Hamt.map identity sampleHamt)
-            , Benchmark.compare "indexedMap"
-                (benchmark2 "Array" Array.indexedMap (,) sampleArray)
-                (benchmark2 "HAMT" Hamt.indexedMap (,) sampleHamt)
-            , Benchmark.compare "toList"
-                (benchmark1 "Array" Array.toList sampleArray)
-                (benchmark1 "HAMT" Hamt.toList sampleHamt)
-            , Benchmark.compare "fromList"
-                (benchmark1 "Array" Array.fromList sampleList)
-                (benchmark1 "HAMT" Hamt.fromList sampleList)
-            , Benchmark.compare "indexedList"
-                (benchmark1 "Array" Array.toIndexedList sampleArray)
-                (benchmark1 "HAMT" Hamt.toIndexedList sampleHamt)
-            , Benchmark.compare "= (equal, best case)"
-                (benchmark2 "Array" (==) sampleArray (Array.set 5 5 sampleArray))
-                (benchmark2 "HAMT" (==) sampleHamt (Hamt.set 5 5 sampleHamt))
-            , Benchmark.compare "= (equal, worst case)"
-                (benchmark2 "Array" (==) sampleArray (Array.map identity sampleArray))
-                (benchmark2 "HAMT" (==) sampleHamt (Hamt.map identity sampleHamt))
-            , Benchmark.compare "= (not equal)"
-                (benchmark2 "Array" (==) sampleArray (Array.set 5 7 sampleArray))
-                (benchmark2 "HAMT" (==) sampleHamt (Hamt.set 5 7 sampleHamt))
+        Benchmark.describe (toString n ++ " elements")
+            [ Benchmark.compare "idealImpl"
+                "List"
+                (\_ -> listFind pred ls)
+                "Array"
+                (\_ -> arrayFind pred arr)
+            , Benchmark.compare "arrayImpl"
+                "Stoppable"
+                (\_ -> arrayFind pred arr)
+                "Foldl"
+                (\_ -> arrayFindSimple pred arr)
+            , Benchmark.compare "simpleImpl"
+                "List"
+                (\_ -> listFindSimple pred ls)
+                "Array"
+                (\_ -> arrayFindSimple pred arr)
             ]
+
+
+type alias TestSubject =
+    { name : String
+    , recievesPlacebo : Bool
+    }
+
+
+subjectName : Int -> String
+subjectName n =
+    "subject#" ++ toString n
+
+
+testSubject : Int -> TestSubject
+testSubject n =
+    { name = subjectName n
+    , recievesPlacebo = n % 2 == 0
+    }
+
+
+simpleSetup : Int -> ( List TestSubject, Array TestSubject ) -> ( List TestSubject, Array TestSubject )
+simpleSetup n ( lsAcc, arrAcc ) =
+    ( List.range 0 (n - 1)
+        |> List.map testSubject
+    , Array.initialize n testSubject
+    )
+
+
+properSetup : Int -> ( List TestSubject, Array TestSubject ) -> ( List TestSubject, Array TestSubject )
+properSetup n (( lsAcc, arrAcc ) as res) =
+    if n == 0 then
+        res
+    else
+        properSetup
+            (n - 1)
+            ( testSubject n :: lsAcc
+            , Array.push (testSubject n) arrAcc
+            )
+
+
+findPredicate : Int -> TestSubject -> Bool
+findPredicate n =
+    let
+        half =
+            n // 2
+    in
+        (\ts ->
+            not ts.recievesPlacebo && ts.name == (subjectName half)
+        )
+
+
+listFind : (a -> Bool) -> List a -> Maybe a
+listFind pred ls =
+    case ls of
+        [] ->
+            Nothing
+
+        x :: xs ->
+            if pred x then
+                Just x
+            else
+                listFind pred xs
+
+
+arrayFind : (a -> Bool) -> Array a -> Maybe a
+arrayFind pred arr =
+    Array.stoppableFoldl
+        (\item acc ->
+            if pred item then
+                JsArray.Done (Just item)
+            else
+                JsArray.Continue acc
+        )
+        Nothing
+        arr
+
+
+listFindSimple : (a -> Bool) -> List a -> Maybe a
+listFindSimple pred ls =
+    List.foldl
+        (\item acc ->
+            if acc == Nothing && pred item then
+                (Just item)
+            else
+                acc
+        )
+        Nothing
+        ls
+
+
+arrayFindSimple : (a -> Bool) -> Array a -> Maybe a
+arrayFindSimple pred arr =
+    Array.foldl
+        (\item acc ->
+            if acc == Nothing && pred item then
+                (Just item)
+            else
+                acc
+        )
+        Nothing
+        arr
