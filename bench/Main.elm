@@ -15,7 +15,7 @@ suite : Int -> Benchmark
 suite n =
     let
         ( ls, arr ) =
-            properSetup n ( [], Array.empty )
+            setup n ( [], Array.empty )
 
         pred =
             findPredicate n
@@ -57,24 +57,12 @@ testSubject n =
     }
 
 
-simpleSetup : Int -> ( List TestSubject, Array TestSubject ) -> ( List TestSubject, Array TestSubject )
-simpleSetup n ( lsAcc, arrAcc ) =
+setup : Int -> ( List TestSubject, Array TestSubject ) -> ( List TestSubject, Array TestSubject )
+setup n ( lsAcc, arrAcc ) =
     ( List.range 0 (n - 1)
         |> List.map testSubject
     , Array.initialize n testSubject
     )
-
-
-properSetup : Int -> ( List TestSubject, Array TestSubject ) -> ( List TestSubject, Array TestSubject )
-properSetup n (( lsAcc, arrAcc ) as res) =
-    if n == 0 then
-        res
-    else
-        properSetup
-            (n - 1)
-            ( testSubject n :: lsAcc
-            , Array.push (testSubject n) arrAcc
-            )
 
 
 findPredicate : Int -> TestSubject -> Bool
@@ -82,10 +70,11 @@ findPredicate n =
     let
         half =
             n // 2
+
+        name =
+            subjectName half
     in
-        (\ts ->
-            not ts.recievesPlacebo && ts.name == (subjectName half)
-        )
+        (\ts -> not ts.recievesPlacebo && ts.name == name)
 
 
 listFind : (a -> Bool) -> List a -> Maybe a
