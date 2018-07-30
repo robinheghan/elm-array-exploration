@@ -1,23 +1,9 @@
-module Tests exposing (all)
+module Tests exposing (..)
 
 import Test exposing (Test, describe, test, fuzz, fuzz2)
 import Fuzz exposing (Fuzzer, intRange)
 import Expect
 import Array.Hamt as Array exposing (..)
-
-
-all : Test
-all =
-    describe "Array"
-        [ initTests
-        , isEmptyTests
-        , lengthTests
-        , getSetTests
-        , conversionTests
-        , transformTests
-        , sliceTests
-        , runtimeCrashTests
-        ]
 
 
 {-|
@@ -172,6 +158,17 @@ conversionTests =
                 in
                     toList (fromList ls)
                         |> Expect.equal ls
+        , fuzz defaultSizeRange "sequencer" <|
+            \size ->
+                let
+                    ls =
+                        List.range 0 (size - 1)
+
+                    result =
+                        fromList ls
+                in
+                    initializeFromSequencer (sequenceLeft result)
+                        |> Expect.equal result
         , fuzz defaultSizeRange "indexed" <|
             \size ->
                 toIndexedList (initialize size ((+) 1))

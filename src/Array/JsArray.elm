@@ -1,11 +1,14 @@
 module Array.JsArray
     exposing
         ( JsArray
+        , Sequencer(..)
+        , SequenceResult(..)
         , empty
         , singleton
         , length
         , initialize
         , initializeFromList
+        , initializeFromSequencer
         , unsafeGet
         , unsafeSet
         , push
@@ -22,16 +25,24 @@ module Array.JsArray
 NOTE: All manipulations causes a copy of the entire array, this can be slow.
 For general purpose use, try the `Array` module instead.
 
+
 # Arrays
+
 @docs JsArray
 
+
 # Creation
+
 @docs empty, singleton, initialize, listInitialize
 
+
 # Basics
+
 @docs length, unsafeGet, unsafeSet, push
 
+
 # Transformation
+
 @docs foldl, foldr, map, slice, merge
 
 -}
@@ -73,6 +84,7 @@ The offset parameter is there so one can avoid creating a closure for this use
 case. This is an optimization that has proved useful in the `Array` module.
 
     initialize 3 5 identity == [5,6,7]
+
 -}
 initialize : Int -> Int -> (Int -> a) -> JsArray a
 initialize =
@@ -88,16 +100,38 @@ to create `JsArray`s above a certain size. That being said, because every
 manipulation of `JsArray` results in a copy, users should always try to keep
 these as small as possible. The `n` parameter should always be set to a
 reasonably small value.
+
 -}
 initializeFromList : Int -> List a -> ( JsArray a, List a )
 initializeFromList =
     Native.JsArray.initializeFromList
 
 
+type
+    Sequencer a
+    -- index leaf next
+    = Sequencer Int (JsArray a) (Maybe (Sequencer a))
+
+
+type SequenceResult a
+    = Empty
+    | Cons a (Sequencer a)
+
+
+initializeFromSequencer :
+    Int
+    -> Sequencer a
+    -> (Sequencer a -> SequenceResult a)
+    -> ( JsArray a, Sequencer a )
+initializeFromSequencer =
+    Native.JsArray.initializeFromSequencer
+
+
 {-| Returns the element at the given index.
 
 WARNING: This function does not perform bounds checking.
 Make sure you know the index is within bounds when using this function.
+
 -}
 unsafeGet : Int -> JsArray a -> a
 unsafeGet =
@@ -108,6 +142,7 @@ unsafeGet =
 
 WARNING: This function does not perform bounds checking.
 Make sure you know the index is within bounds when using this function.
+
 -}
 unsafeSet : Int -> a -> JsArray a -> JsArray a
 unsafeSet =
@@ -146,6 +181,7 @@ map =
 An offset allows to modify the index passed to the function.
 
     indexedMap (,) 5 (repeat 3 3) == Array [(5,3), (6,3), (7,3)]
+
 -}
 indexedMap : (Int -> a -> b) -> Int -> JsArray a -> JsArray b
 indexedMap =
@@ -162,6 +198,7 @@ of the array. Popping the last element of the array is therefore:
 `slice 0 -1 arr`.
 
 In the case of an impossible slice, the empty array is returned.
+
 -}
 slice : Int -> Int -> JsArray a -> JsArray a
 slice =
@@ -172,6 +209,7 @@ slice =
 
 The `n` parameter is required by the `Array` module, which never wants to
 create `JsArray`s above a certain size, even when appending.
+
 -}
 appendN : Int -> JsArray a -> JsArray a -> JsArray a
 appendN =

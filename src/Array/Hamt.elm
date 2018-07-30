@@ -5,6 +5,9 @@ module Array.Hamt
         , isEmpty
         , length
         , initialize
+        , initializeFromSequencer
+        , uncons
+        , sequenceLeft
         , repeat
         , fromList
         , get
@@ -62,7 +65,7 @@ module Array.Hamt
 -}
 
 import Bitwise
-import Array.JsArray as JsArray exposing (JsArray)
+import Array.JsArray as JsArray exposing (JsArray, Sequencer(..), SequenceResult(..))
 
 
 {-| The array in this module is implemented as a tree with a high branching
@@ -271,6 +274,30 @@ fromListHelp list nodeList nodeListSize =
         else
             fromListHelp
                 remainingItems
+                ((Leaf jsArray) :: nodeList)
+                (nodeListSize + 1)
+
+
+initializeFromSequencer : Sequencer a -> Array a
+initializeFromSequencer seq =
+    initializeFromSequencerHelp seq [] 0
+
+
+initializeFromSequencerHelp : Sequencer a -> List (Node a) -> Int -> Array a
+initializeFromSequencerHelp seq nodeList nodeListSize =
+    let
+        ( jsArray, nextSeq ) =
+            JsArray.initializeFromSequencer branchFactor seq uncons
+    in
+        if JsArray.length jsArray < branchFactor then
+            builderToArray True
+                { tail = jsArray
+                , nodeList = nodeList
+                , nodeListSize = nodeListSize
+                }
+        else
+            initializeFromSequencerHelp
+                nextSeq
                 ((Leaf jsArray) :: nodeList)
                 (nodeListSize + 1)
 
@@ -959,6 +986,42 @@ sliceLeft from ((Array length _ tree tail) as arr) =
                     in
                         List.foldl appendHelpBuilder initialBuilder rest
                             |> builderToArray True
+
+
+
+-- SEQUENCER
+
+
+uncons : Sequencer a -> SequenceResult a
+uncons (Sequencer index leaf maybeNext) =
+    if index >= JsArray.length leaf then
+        case maybeNext of
+            Just next ->
+                uncons next
+
+            Nothing ->
+                Empty
+    else
+        Cons
+            (JsArray.unsafeGet index leaf)
+            (Sequencer (index + 1) leaf maybeNext)
+
+
+sequenceLeft : Array a -> Sequencer a
+sequenceLeft (Array length _ tree tail) =
+    let
+        initialSequencer =
+            Sequencer 0 tail Nothing
+
+        helper node acc =
+            case node of
+                SubTree tree ->
+                    JsArray.foldr helper acc tree
+
+                Leaf leaf ->
+                    Sequencer 0 leaf (Just acc)
+    in
+        JsArray.foldr helper initialSequencer tree
 
 
 {-| A builder contains all information necessary to build an array. Adding

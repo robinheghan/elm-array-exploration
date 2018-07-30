@@ -37,6 +37,28 @@ function initializeFromList(max, ls) {
     };
 }
 
+function initializeFromSequencer(max, seq, uncons) {
+    var result = new Array(max);
+
+    for (var i = 0; i < max; i++) {
+      var cell = uncons(seq);
+      if (cell.ctor === 'Empty') {
+        break;
+      }
+
+      result[i] = cell._0;
+      seq = cell._1;
+    }
+
+    result.length = i;
+
+    return {
+        ctor: '_Tuple2',
+        _0: result,
+        _1: seq
+    };
+}
+
 function unsafeGet(idx, arr) {
     return arr[idx];
 }
@@ -136,7 +158,8 @@ return {
     singleton: singleton,
     length: length,
     initialize: F3(initialize),
-    initializeFromList: F2(initializeFromList),
+  initializeFromList: F2(initializeFromList),
+  initializeFromSequencer: F3(initializeFromSequencer),
     unsafeGet: F2(unsafeGet),
     unsafeSet: F3(unsafeSet),
     push: F2(push),
